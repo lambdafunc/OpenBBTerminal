@@ -1,40 +1,38 @@
-,% Of Etf,Shares
-TSLA,10.65%,"196,846"
-PATH,7.75%,"3,927,868"
-TRMB,7.16%,"1,797,163"
-KTOS,6.58%,"7,253,960"
-IRDM,4.86%,"2,459,364"
-KMTUY,4.49%,"3,260,777"
-DE,3.90%,"195,439"
-DDD,3.62%,"3,525,947"
-U,3.37%,"550,713"
-TSP,2.80%,"2,092,013"
-MG.TO,2.78%,"592,172"
-MKFG,2.61%,"9,605,894"
-AVAV,2.60%,"815,916"
-PLTR,2.49%,"2,970,570"
-NIU,2.37%,"3,072,134"
-TER,2.31%,"278,592"
-BLDE,2.11%,"5,968,836"
-GOOG,1.99%,"13,632"
-ACHR,1.90%,"9,011,467"
-ESLT.TA,1.82%,"197,474"
-XPEV,1.69%,"677,301"
-CAT,1.65%,"138,503"
-VLD,1.61%,"5,500,431"
-NNDM,1.60%,"8,408,342"
-BIDU,1.58%,"197,014"
-LMT,1.53%,"79,724"
-MTLS,1.38%,"1,277,435"
-TDY,1.35%,"60,980"
-SSYS,1.26%,"1,008,786"
-PRLB,1.22%,"466,428"
-ISRG,1.19%,"72,533"
-ANSS,1.14%,"61,571"
-VUZI,1.09%,"2,718,273"
-SNPS,1.08%,"62,760"
-BYDDY,1.03%,"296,935"
-n/a,0.75%,"14,298,046"
-TWOU,0.65%,"759,559"
-JD,0.03%,"7,070"
-ONVO,0.02%,"113,180"
+Symbol,Name,% Of Etf,Shares
+TSLA,"Tesla, Inc.",14.48%,674579
+PATH,UiPath Inc.,7.48%,4605486
+TRMB,Trimble Inc.,7.40%,1307742
+IRDM,Iridium Communications Inc.,7.32%,1089806
+KTOS,"Kratos Defense & Security Solutions, Inc.",7.20%,5921223
+TER,"Teradyne, Inc.",5.30%,492647
+DE,Deere & Company,4.62%,101342
+KMTUY,KOMATSU LTD -SPONS ADR,4.16%,1624955
+AVAV,"AeroVironment, Inc.",3.81%,418204
+DDD,3D Systems Corporation,2.87%,2512773
+BLDE,"Blade Air Mobility, Inc.",2.58%,5108401
+NVDA,NVIDIA Corporation,2.35%,105928
+VLD,"Velo3D, Inc.",2.24%,6885117
+ACHR,Archer Aviation Inc.,2.06%,6963301
+CAT,Caterpillar Inc.,1.94%,76402
+MG.TO,MAGNA INTERNATIONAL INC,1.92%,322470
+GOOG,Alphabet Inc.,1.83%,187020
+U,Unity Software Inc.,1.81%,447027
+ESLT.TA,ELBIT SYSTEMS LTD,1.73%,96820
+BYDDY,BYD CO LTD-UNSPONSORED ADR,1.62%,266097
+GM,General Motors Company,1.58%,361979
+MKFG,Markforged Holding Corporation,1.50%,10256670
+TDY,Teledyne Technologies Incorporated,1.45%,31739
+ISRG,"Intuitive Surgical, Inc.",1.44%,57898
+VUZI,Vuzix Corporation,1.32%,2756860
+SNPS,"Synopsys, Inc.",1.31%,34469
+ANSS,"ANSYS, Inc.",1.25%,43861
+SSYS,Stratasys Ltd.,1.20%,834881
+LMT,Lockheed Martin Corporation,1.02%,19886
+RKLB,"Rocket Lab USA, Inc.",0.91%,1835135
+MTLS,Materialise NV,0.86%,910340
+TWOU,"2U, Inc.",0.58%,585829
+XPEV,XPeng Inc.,0.36%,368124
+NIU,Niu Technologies,0.17%,339911
+N/A,DREYFUS GOVT CASH MAN INS,0.16%,1536224
+PRLB,"Proto Labs, Inc.",0.15%,44002
+ONVO,"Organovo Holdings, Inc.",0.00%,100

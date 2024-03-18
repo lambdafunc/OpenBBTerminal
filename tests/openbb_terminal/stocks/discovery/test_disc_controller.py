@@ -1,22 +1,23 @@
 # IMPORTATION STANDARD
+
 import os
+from datetime import datetime
 
 # IMPORTATION THIRDPARTY
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import PreferencesModel, copy_user
 from openbb_terminal.stocks.discovery import disc_controller
 
-# pylint: disable=E1101
-# pylint: disable=W0603
-# pylint: disable=E1111
+# pylint: disable=E1101,W0603,E1111
 
 
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -38,9 +39,11 @@ def test_menu_with_queue(expected, mocker, queue):
 @pytest.mark.vcr(record_mode="none")
 def test_menu_without_queue_completion(mocker):
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -51,10 +54,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=disc_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.discovery.disc_controller.session",
@@ -66,7 +70,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = disc_controller.DiscoveryController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -76,10 +80,11 @@ def test_menu_without_queue_completion(mocker):
 )
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=disc_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.discovery.disc_controller.session",
@@ -111,7 +116,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = disc_controller.DiscoveryController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -198,20 +203,21 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "call_active",
             "yahoofinance_view.display_active",
             ["--limit=5", "--export=csv"],
-            {"num_stocks": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_arkord",
             "ark_view.ark_orders_view",
             ["--limit=5", "--sortby=date", "--fund=ARKK", "--export=csv"],
             {
-                "num": 5,
-                "sort_col": ["date"],
-                "ascending": False,
+                "limit": 5,
+                "sortby": "date",
+                "ascend": False,
                 "buys_only": False,
                 "sells_only": False,
                 "fund": "ARKK",
                 "export": "csv",
+                "sheet_name": None,
             },
         ),
         (
@@ -221,74 +227,72 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--limit=5",
                 "--export=csv",
             ],
-            {"num_stocks": 5, "export": "csv"},
-        ),
-        (
-            "call_cnews",
-            "seeking_alpha_view.display_news",
-            [
-                "--type=technology",
-                "--limit=5",
-                "--export=csv",
-            ],
-            {"news_type": "technology", "num": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_fipo",
             "finnhub_view.future_ipo",
             ["--days=5", "--limit=20", "--export=csv"],
-            {"num_days_ahead": 5, "end_date": None, "limit": 20, "export": "csv"},
-        ),
-        (
-            "call_ford",
-            "fidelity_view.orders_view",
-            [
-                "--limit=5",
-                "--export=csv",
-            ],
-            {"num": 5, "export": "csv"},
+            {
+                "num_days_ahead": 5,
+                "end_date": None,
+                "limit": 20,
+                "export": "csv",
+                "sheet_name": None,
+            },
         ),
         (
             "call_gainers",
             "yahoofinance_view.display_gainers",
             ["--limit=5", "--export=csv"],
-            {"num_stocks": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_gtech",
             "yahoofinance_view.display_gtech",
             ["--limit=5", "--export=csv"],
-            {"num_stocks": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_hotpenny",
             "shortinterest_view.hot_penny_stocks",
-            ["--limit=5", "--export=csv"],
-            {"num": 5, "export": "csv"},
+            ["--limit=5", "--export=csv", "--source=YahooFinance"],
+            {
+                "limit": 5,
+                "export": "csv",
+                "sheet_name": None,
+                "source": "YahooFinance",
+            },
         ),
         (
             "call_losers",
             "yahoofinance_view.display_losers",
             ["--limit=5", "--export=csv"],
-            {"num_stocks": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_lowfloat",
             "shortinterest_view.low_float",
             ["--limit=5", "--export=csv"],
-            {"num": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_pipo",
             "finnhub_view.past_ipo",
             ["--days=5", "--limit=20", "--export=csv"],
-            {"num_days_behind": 5, "start_date": None, "limit": 20, "export": "csv"},
+            {
+                "num_days_behind": 5,
+                "start_date": None,
+                "limit": 20,
+                "export": "csv",
+                "sheet_name": None,
+            },
         ),
         (
             "call_rtat",
             "nasdaq_view.display_top_retail",
             ["--limit=5", "--export=csv"],
-            {"n_days": 5, "export": "csv"},
+            {"limit": 5, "export": "csv"},
         ),
         (
             "call_trending",
@@ -300,27 +304,33 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             ],
             {
                 "article_id": 123,
-                "num": 5,
+                "limit": 5,
                 "export": "csv",
+                "sheet_name": None,
             },
         ),
         (
             "call_ugs",
             "yahoofinance_view.display_ugs",
             ["--limit=5", "--export=csv"],
-            {"num_stocks": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_ulc",
             "yahoofinance_view.display_ulc",
             ["--limit=5", "--export=csv"],
-            {"num_stocks": 5, "export": "csv"},
+            {"limit": 5, "export": "csv", "sheet_name": None},
         ),
         (
             "call_upcoming",
             "seeking_alpha_view.upcoming_earning_release_dates",
-            ["--n_pages=10", "--limit=5", "--export=csv"],
-            {"num_pages": 10, "num_earnings": 5, "export": "csv"},
+            ["--start=2023-03-22", "--limit=5", "--export=csv"],
+            {
+                "limit": 5,
+                "start_date": datetime(2023, 3, 22),
+                "export": "csv",
+                "sheet_name": None,
+            },
         ),
     ],
 )
@@ -348,9 +358,7 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
         "call_active",
         "call_arkord",
         "call_asc",
-        "call_cnews",
         "call_fipo",
-        "call_ford",
         "call_gainers",
         "call_gtech",
         "call_hotpenny",
@@ -366,7 +374,7 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
 )
 def test_call_func_no_parser(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.discovery.disc_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.discovery.disc_controller.DiscoveryController.parse_known_args_and_warn",
         return_value=None,
     )
     controller = disc_controller.DiscoveryController()
@@ -374,4 +382,4 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(disc_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()

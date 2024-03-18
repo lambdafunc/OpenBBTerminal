@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
@@ -6,6 +7,10 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.cryptocurrency import crypto_controller
 
 # pylint: disable=E1101
@@ -61,7 +66,7 @@ def vcr_config():
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -83,9 +88,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.cryptocurrency.crypto_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -96,10 +103,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=crypto_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -111,7 +119,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = crypto_controller.CryptoController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -123,10 +131,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.cryptocurrency.crypto_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=crypto_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -155,7 +164,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = crypto_controller.CryptoController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -292,6 +301,13 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             [],
             dict(),
         ),
+        (
+            "call_tools",
+            [],
+            "CryptoController.load_class",
+            [],
+            dict(),
+        ),
     ],
 )
 def test_call_func(
@@ -299,16 +315,10 @@ def test_call_func(
 ):
     path_controller = "openbb_terminal.cryptocurrency.crypto_controller"
 
-    # MOCK SHOW_AVAILABLE_PAIRS_FOR_GIVEN_SYMBOL
+    # MOCK GET_COINGECKO_ID
     mocker.patch(
-        target=f"{path_controller}.binance_model.show_available_pairs_for_given_symbol",
-        return_value=BINANCE_SHOW_AVAILABLE_PAIRS_OF_GIVEN_SYMBOL,
-    )
-
-    # MOCK SHOW_AVAILABLE_PAIRS_FOR_GIVEN_SYMBOL
-    mocker.patch(
-        target=f"{path_controller}.coinbase_model.show_available_pairs_for_given_symbol",
-        return_value=COINBASE_SHOW_AVAILABLE_PAIRS_OF_GIVEN_SYMBOL,
+        target=f"{path_controller}.cryptocurrency_helpers.get_coingecko_id",
+        return_value=True,
     )
 
     if mocked_func:
@@ -319,8 +329,6 @@ def test_call_func(
         )
 
         controller = crypto_controller.CryptoController(queue=None)
-        controller.coin_map_df = COIN_MAP_DF
-        controller.coin = CURRENT_COIN
         controller.symbol = SYMBOL
         controller.source = "bin"
         getattr(controller, tested_func)(other_args)
@@ -331,8 +339,6 @@ def test_call_func(
             mock.assert_called_once()
     else:
         controller = crypto_controller.CryptoController(queue=None)
-        controller.coin_map_df = COIN_MAP_DF
-        controller.coin = CURRENT_COIN
         controller.symbol = SYMBOL
         controller.source = "bin"
         getattr(controller, tested_func)(other_args)
@@ -343,13 +349,12 @@ def test_call_func(
     "tested_func",
     [
         "call_prt",
-        "call_chart",
+        "call_candle",
         "call_ta",
         "call_dd",
-        "call_pred",
     ],
 )
 def test_call_func_no_current_coin(tested_func):
     controller = crypto_controller.CryptoController(queue=None)
-    controller.current_coin = None
+    controller.symbol = None
     getattr(controller, tested_func)([])

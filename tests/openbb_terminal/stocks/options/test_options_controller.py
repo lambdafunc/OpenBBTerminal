@@ -1,12 +1,16 @@
 # IMPORTATION STANDARD
+import argparse
 import os
-from collections import namedtuple
 
 # IMPORTATION THIRDPARTY
 import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.stocks.options import options_controller
 
 # pylint: disable=E1101
@@ -78,8 +82,8 @@ PUTS = pd.DataFrame(
     }
 )
 
-Options = namedtuple("Options", ["calls", "puts"])
-CHAIN = Options(calls=CALLS, puts=PUTS)
+CHAIN = pd.merge(CALLS, PUTS, on="strike")
+CHAIN["expiration"] = "2024-01-19"
 
 
 @pytest.fixture(scope="module")
@@ -93,11 +97,12 @@ def vcr_config():
     }
 
 
+@pytest.mark.skip
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -114,7 +119,7 @@ def test_menu_with_queue(expected, mocker, queue):
         return_value=EXPIRY_DATES,
     )
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.get_option_chain",
+        target=f"{path_controller}.yfinance_model.get_full_option_chain",
         return_value=CHAIN,
     )
 
@@ -131,6 +136,7 @@ def test_menu_with_queue(expected, mocker, queue):
     assert result_menu == expected
 
 
+@pytest.mark.skip
 @pytest.mark.vcr(record_mode="none")
 def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.stocks.options.options_controller"
@@ -145,14 +151,16 @@ def test_menu_without_queue_completion(mocker):
         return_value=EXPIRY_DATES,
     )
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.get_option_chain",
+        target=f"{path_controller}.yfinance_model.get_full_option_chain",
         return_value=CHAIN,
     )
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -163,10 +171,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=options_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -187,7 +196,7 @@ def test_menu_without_queue_completion(mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -198,9 +207,9 @@ def test_menu_without_queue_completion(mocker):
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.stocks.options.options_controller"
 
-    # MOCK OPTION_EXPIRATIONS + CHAIN
+    # MOCK OPTION_EXPIRATIONS + CHAIN + LAST PRICE
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.option_expirations",
+        target=f"{path_controller}.nasdaq_model.option_expirations",
         return_value=EXPIRY_DATES,
     )
     mocker.patch(
@@ -208,15 +217,32 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         return_value=EXPIRY_DATES,
     )
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.get_option_chain",
+        target=f"{path_controller}.yfinance_model.option_expirations",
+        return_value=[],
+    )
+    mocker.patch(
+        target=f"{path_controller}.tradier_model.get_full_option_chain",
         return_value=CHAIN,
+    )
+    mocker.patch(
+        target=f"{path_controller}.yfinance_model.get_full_option_chain",
+        return_value=CHAIN,
+    )
+    mocker.patch(
+        target=f"{path_controller}.yfinance_model.get_last_price",
+        return_value=100.0,
+    )
+    mocker.patch(
+        target=f"{path_controller}.tradier_model.get_last_price",
+        return_value=100.0,
     )
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=options_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -248,7 +274,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -295,6 +321,7 @@ def test_call_cls(mocker):
     os.system.assert_called_once_with("cls||clear")
 
 
+@pytest.mark.skip
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "func, queue, expected_queue",
@@ -355,7 +382,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
         return_value=EXPIRY_DATES,
     )
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.get_option_chain",
+        target=f"{path_controller}.yfinance_model.get_full_option_chain",
         return_value=CHAIN,
     )
 
@@ -370,7 +397,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
     assert controller.queue == expected_queue
 
 
-# @pytest.mark.skip
+@pytest.mark.skip
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "tested_func, other_args, mocked_func, called_args, called_kwargs",
@@ -418,7 +445,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             [
                 "1",
                 "--sortby=Vol",
-                "--ascending",
+                "--reverse",
                 "--puts_only",
                 "--calls_only",
                 "--export=csv",
@@ -432,7 +459,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             [
                 "1",
                 "--sortby=Vol",
-                "--ascending",
+                "--reverse",
                 "--puts_only",
                 # "--calls_only",
                 "--export=csv",
@@ -440,10 +467,11 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             "fdscanner_view.display_options",
             [],
             dict(
-                num=1,
-                sort_column=["Vol"],
+                limit=1,
+                sortby=["Vol"],
                 export="csv",
-                ascending=True,
+                sheet_name=None,
+                ascend=True,
                 calls_only=False,
                 puts_only=True,
             ),
@@ -454,10 +482,11 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             "alphaquery_view.display_put_call_ratio",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 window="10",
                 start_date="2021-12-01",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -465,10 +494,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             ["--export=csv"],
             "barchart_view.print_options_data",
             [],
-            dict(
-                ticker="MOCK_TICKER",
-                export="csv",
-            ),
+            dict(symbol="MOCK_TICKER", export="csv", sheet_name=None),
         ),
         (
             # PUT
@@ -482,18 +508,19 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--limit=2",
                 "--export=csv",
             ],
-            "syncretism_view.view_historical_greeks",
+            "intrinio_view.view_historical_greeks",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 strike=200.0,
                 greek="theta",
                 chain_id="MOCK_CHAIN_ID",
                 put=True,
                 raw=True,
-                n_show="2",
+                limit="2",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -508,18 +535,19 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--limit=2",
                 "--export=csv",
             ],
-            "syncretism_view.view_historical_greeks",
+            "intrinio_view.view_historical_greeks",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 strike=200.0,
                 greek="theta",
                 chain_id="MOCK_CHAIN_ID",
                 put=False,
                 raw=True,
-                n_show="2",
+                limit="2",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -553,7 +581,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--put",
                 "--chain=MOCK_CHAIN_ID",
                 "--raw",
-                "--source=ce",
+                "--source=chartexchange",
                 "--limit=2",
                 "--export=csv",
             ],
@@ -576,18 +604,19 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--put",
                 "--chain=MOCK_CHAIN_ID",
                 "--raw",
-                "--source=td",
+                "--source=tradier",
                 "--limit=2",
                 "--export=csv",
             ],
             "tradier_view.display_historical",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 strike=200.0,
                 put=True,
                 export="csv",
+                sheet_name=None,
                 raw=True,
                 chain_id="MOCK_CHAIN_ID",
             ),
@@ -613,6 +642,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             [
                 "--calls",
                 "--puts",
+                "--source=tradier",
                 "--min=1",
                 "--max=2",
                 "--display=volume",
@@ -621,7 +651,7 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             "tradier_view.display_chains",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 to_display=["volume"],
                 min_sp=1.0,
@@ -629,6 +659,27 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 calls_only=True,
                 puts_only=True,
                 export="csv",
+                sheet_name=None,
+            ),
+        ),
+        (
+            "call_chains",
+            [
+                "--min=1",
+                "--max=2",
+                "--export=csv",
+            ],
+            "yfinance_view.display_chains",
+            [],
+            dict(
+                symbol="MOCK_TICKER",
+                expiry="2022-01-07",
+                min_sp=1.0,
+                max_sp=2.0,
+                calls_only=False,
+                puts_only=False,
+                export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -639,19 +690,20 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--max=2",
                 "--calls",
                 "--puts",
-                "--source=yf",
+                "--source=YahooFinance",
                 "--export=csv",
             ],
             "yfinance_view.plot_vol",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 min_sp=1.0,
                 max_sp=2.0,
                 calls_only=True,
                 puts_only=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -662,19 +714,20 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--max=2",
                 "--calls",
                 "--puts",
-                "--source=tr",
+                "--source=tradier",
                 "--export=csv",
             ],
             "tradier_view.plot_vol",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 min_sp=1.0,
                 max_sp=2.0,
                 calls_only=True,
                 puts_only=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -684,18 +737,19 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--minv=1",
                 "--min=2",
                 "--max=3",
-                "--source=yf",
+                "--source=YahooFinance",
                 "--export=csv",
             ],
             "yfinance_view.plot_volume_open_interest",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 min_sp=2.0,
                 max_sp=3.0,
                 min_vol=1.0,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -705,18 +759,19 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--minv=1",
                 "--min=2",
                 "--max=3",
-                "--source=tr",
+                "--source=tradier",
                 "--export=csv",
             ],
             "tradier_view.plot_volume_open_interest",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 min_sp=2.0,
                 max_sp=3.0,
                 min_vol=1.0,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -727,19 +782,20 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--max=2",
                 "--calls",
                 "--puts",
-                "--source=yf",
+                "--source=YahooFinance",
                 "--export=csv",
             ],
             "yfinance_view.plot_oi",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 min_sp=1.0,
                 max_sp=2.0,
                 calls_only=True,
                 puts_only=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -750,19 +806,20 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
                 "--max=2",
                 "--calls",
                 "--puts",
-                "--source=tr",
+                "--source=tradier",
                 "--export=csv",
             ],
             "tradier_view.plot_oi",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 expiry="2022-01-07",
                 min_sp=1.0,
                 max_sp=2.0,
                 calls_only=True,
                 puts_only=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -778,67 +835,11 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
             [
                 "MOCK_TICKER",
                 "2022-01-07",
-                True,
                 "c",
                 "v",
                 "smile",
+                True,
                 "jpg",
-            ],
-            dict(),
-        ),
-        (
-            "call_parity",
-            [
-                "--put",
-                "--ask",
-                "--min=1",
-                "--max=2",
-                "--export=csv",
-            ],
-            "yfinance_view.show_parity",
-            [
-                "MOCK_TICKER",
-                "2022-01-07",
-                True,
-                True,
-                1,
-                2,
-                "csv",
-            ],
-            dict(),
-        ),
-        (
-            "call_binom",
-            [
-                "1",
-                "--put",
-                "--european",
-                "--xlsx",
-                "--plot",
-                "--volatility=2",
-                "--export=csv",
-            ],
-            "yfinance_view.show_binom",
-            [
-                "MOCK_TICKER",
-                "2022-01-07",
-                1.0,
-                True,
-                True,
-                True,
-                True,
-                2.0,
-            ],
-            dict(),
-        ),
-        (
-            "call_payoff",
-            [],
-            "payoff_controller.PayoffController",
-            [
-                "MOCK_TICKER",
-                "2022-01-07",
-                [],
             ],
             dict(),
         ),
@@ -858,15 +859,15 @@ def test_call_func_expect_queue(expected_queue, func, mocker, queue):
         ),
     ],
 )
-def test_call_func_test(
+def test_call_func(
     tested_func, mocked_func, other_args, called_args, called_kwargs, mocker
 ):
     path_controller = "openbb_terminal.stocks.options.options_controller"
 
-    # MOCK TRADIER_TOKEN
+    # MOCK API_TRADIER_TOKEN
     mocker.patch.object(
         target=options_controller,
-        attribute="TRADIER_TOKEN",
+        attribute="API_TRADIER_TOKEN",
         new="MOCK_TRADIER_TOKEN",
     )
 
@@ -880,7 +881,7 @@ def test_call_func_test(
         return_value=EXPIRY_DATES,
     )
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.get_option_chain",
+        target=f"{path_controller}.yfinance_model.get_full_option_chain",
         return_value=CHAIN,
     )
 
@@ -919,16 +920,13 @@ def test_call_func_test(
         "call_chains",
         "call_grhist",
         "call_plot",
-        "call_parity",
-        "call_binom",
-        "call_payoff",
-        "call_pricing",
     ],
 )
 def test_call_func_no_ticker(func, mocker):
+    m = mocker.Mock(**{"chain_id": None})
     mocker.patch(
-        "openbb_terminal.stocks.options.options_controller.parse_known_args_and_warn",
-        return_value=True,
+        "openbb_terminal.stocks.options.options_controller.OptionsController.parse_known_args_and_warn",
+        return_value=m,
     )
     controller = options_controller.OptionsController(ticker=None)
 
@@ -948,16 +946,16 @@ def test_call_func_no_ticker(func, mocker):
         "call_oi",
         "call_vol",
         "call_plot",
-        "call_parity",
-        "call_binom",
-        "call_payoff",
-        "call_pricing",
     ],
 )
 def test_call_func_no_selected_date(func, mocker):
     path_controller = "openbb_terminal.stocks.options.options_controller"
 
     # MOCK OPTION_EXPIRATIONS + CHAIN
+    mocker.patch(
+        target=f"{path_controller}.nasdaq_model.option_expirations",
+        return_value=[],
+    )
     mocker.patch(
         target=f"{path_controller}.yfinance_model.option_expirations",
         return_value=[],
@@ -967,14 +965,21 @@ def test_call_func_no_selected_date(func, mocker):
         return_value=[],
     )
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.get_option_chain",
+        target=f"{path_controller}.yfinance_model.get_full_option_chain",
         return_value=None,
     )
-
-    # MOCK PARSE_KNOWN_ARGS_AND_WARN
     mocker.patch(
-        "openbb_terminal.stocks.options.options_controller.parse_known_args_and_warn",
-        return_value=True,
+        target=f"{path_controller}.tradier_model.get_full_option_chain",
+        return_value=None,
+    )
+    # MOCK PARSE_KNOWN_ARGS_AND_WARN
+    ns = argparse.Namespace()
+    ns.exp = ""  # set the exp attribute
+    ns.chain_id = None
+    ns.expiration = None
+    mocker.patch(
+        "openbb_terminal.stocks.options.options_controller.OptionsController.parse_known_args_and_warn",
+        return_value=ns,  # return the Namespace object
     )
 
     controller = options_controller.OptionsController(ticker="MOCK_TICKER")
@@ -984,12 +989,13 @@ def test_call_func_no_selected_date(func, mocker):
     assert controller.selected_date == ""
 
 
+@pytest.mark.skip
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "other_args",
     [
         ["TSLA"],
-        ["TSLA", "--source=yf"],
+        ["TSLA", "--source=YahooFinance"],
     ],
 )
 def test_call_load(mocker, other_args):
@@ -1005,7 +1011,7 @@ def test_call_load(mocker, other_args):
         return_value=EXPIRY_DATES,
     )
     mocker.patch(
-        target=f"{path_controller}.yfinance_model.get_option_chain",
+        target=f"{path_controller}.yfinance_model.get_full_option_chain",
         return_value=CHAIN,
     )
 

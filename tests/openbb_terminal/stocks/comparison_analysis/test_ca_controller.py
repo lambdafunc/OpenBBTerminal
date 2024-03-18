@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
@@ -6,6 +7,10 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.stocks.comparison_analysis import ca_controller
 
 # pylint: disable=E1101
@@ -18,7 +23,7 @@ DF_EMPTY = pd.DataFrame()
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["historical", "help"], []),
+        (["historical", "help"], ["help"]),
         (["q", ".."], [".."]),
     ],
 )
@@ -41,9 +46,11 @@ def test_menu_with_queue(expected, mocker, queue):
 @pytest.mark.vcr(record_mode="none")
 def test_menu_without_queue_completion(mocker):
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -54,10 +61,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=ca_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.comparison_analysis.ca_controller.session",
@@ -72,7 +80,7 @@ def test_menu_without_queue_completion(mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -82,10 +90,11 @@ def test_menu_without_queue_completion(mocker):
 )
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=ca_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.comparison_analysis.ca_controller.session",
@@ -120,7 +129,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -170,9 +179,10 @@ def test_call_cls(mocker):
                 "quit",
                 "quit",
                 "quit",
+                "quit",
             ],
         ),
-        ("call_exit", ["help"], ["quit", "quit", "quit", "help"]),
+        ("call_exit", ["help"], ["quit", "quit", "quit", "quit", "help"]),
         ("call_home", [], ["quit", "quit"]),
         ("call_help", [], []),
         ("call_quit", [], ["quit"]),
@@ -235,14 +245,17 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--type=h",
                 "--no-scale",
                 "--start=2020-12-01",
+                "--end=2022-12-11",
                 "--export=csv",
             ],
             dict(
-                similar_tickers=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
-                start="2020-12-01",
+                similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
+                start_date="2020-12-01",
+                end_date="2022-12-11",
                 candle_type="h",
                 normalize=False,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -251,11 +264,17 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             [
                 "--type=h",
                 "--start=2020-12-01",
+                "--end=2022-12-11",
             ],
             dict(
-                similar_tickers=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
-                start="2020-12-01",
+                similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
+                start_date="2020-12-01",
+                end_date="2022-12-11",
                 candle_type="h",
+                export="",
+                sheet_name=None,
+                display_full_matrix=False,
+                raw=False,
             ),
         ),
         (
@@ -263,12 +282,15 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "yahoo_finance_view.display_volume",
             [
                 "--start=2020-12-01",
+                "--end=2022-12-11",
                 "--export=csv",
             ],
             dict(
-                similar_tickers=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
-                start="2020-12-01",
+                similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
+                start_date="2020-12-01",
+                end_date="2022-12-11",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -279,9 +301,11 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--timeframe=MOCK_TIMEFRAME",
             ],
             dict(
-                similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
+                symbols=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 timeframe="MOCK_TIMEFRAME",
                 quarter=True,
+                export="",
+                sheet_name=None,
             ),
         ),
         (
@@ -293,9 +317,11 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--export=csv",
             ],
             dict(
-                similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
+                symbols=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 timeframe="MOCK_TIMEFRAME",
                 quarter=True,
+                export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -307,9 +333,11 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--export=csv",
             ],
             dict(
-                similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
+                symbols=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 timeframe="MOCK_TIMEFRAME",
                 quarter=True,
+                export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -323,6 +351,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -336,6 +365,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -348,6 +378,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 data_type="overview",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -360,6 +391,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 data_type="valuation",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -372,6 +404,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 data_type="financial",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -384,6 +417,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 data_type="ownership",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -396,6 +430,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 data_type="performance",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -408,6 +443,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 similar=["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"],
                 data_type="technical",
                 export="csv",
+                sheet_name=None,
             ),
         ),
     ],
@@ -443,9 +479,7 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
     "func",
     [
         "call_ticker",
-        "call_getpoly",
-        "call_getfinnhub",
-        "call_getfinviz",
+        "call_get",
         "call_set",
         "call_add",
         "call_rmv",
@@ -468,7 +502,7 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
 )
 def test_call_func_no_parser(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.comparison_analysis.ca_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.comparison_analysis.ca_controller.ComparisonAnalysisController.parse_known_args_and_warn",
         return_value=None,
     )
     controller = ca_controller.ComparisonAnalysisController(
@@ -478,7 +512,7 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(ca_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -498,19 +532,19 @@ def test_call_ticker(mocker):
     "tested_func, mocked_func, other_args",
     [
         (
-            "call_getfinviz",
+            "call_get",
             "finviz_compare_model.get_similar_companies",
-            ["--nocountry"],
+            ["--nocountry", "--source=Finviz"],
         ),
         (
-            "call_getpoly",
+            "call_get",
             "polygon_model.get_similar_companies",
-            ["--us_only"],
+            ["--us_only", "--source=Polygon"],
         ),
         (
-            "call_getfinnhub",
+            "call_get",
             "finnhub_model.get_similar_companies",
-            [],
+            ["--source=Finnhub"],
         ),
     ],
 )
@@ -518,8 +552,7 @@ def test_func_calling_get_similar_companies(
     tested_func, mocked_func, other_args, mocker
 ):
     similar = ["MOCK_SIMILAR_" + str(i) for i in range(11)]
-    user = "MOCK_USER"
-    mock = mocker.Mock(return_value=(similar, user))
+    mock = mocker.Mock(return_value=similar)
     target = "openbb_terminal.stocks.comparison_analysis." + mocked_func
     mocker.patch(target=target, new=mock)
 
@@ -529,25 +562,9 @@ def test_func_calling_get_similar_companies(
 
 
 @pytest.mark.vcr(record_mode="none")
-def test_call_po(mocker):
-    similar = ["MOCK_SIMILAR_1", "MOCK_SIMILAR_2"]
-    mock = mocker.Mock(return_value=["MOCK_SIMILAR", "MOCK_USER"])
-    target = "openbb_terminal.portfolio.portfolio_optimization.po_controller.PortfolioOptimizationController.menu"
-    mocker.patch(target=target, new=mock)
-
-    controller = ca_controller.ComparisonAnalysisController(similar=similar)
-    controller.call_po([])
-    mock.assert_called_once()
-
-    controller = ca_controller.ComparisonAnalysisController()
-    controller.call_po([])
-    assert controller.queue == []
-
-
-@pytest.mark.vcr(record_mode="none")
 def test_call_tsne(mocker):
     similar = ["MOCK_SIMILAR"]
-    mock = mocker.Mock(return_value=["MOCK_SIMILAR", "MOCK_USER"])
+    mock = mocker.Mock(return_value=pd.DataFrame())
     target = "openbb_terminal.stocks.comparison_analysis.yahoo_finance_model.get_sp500_comps_tsne"
     mocker.patch(target=target, new=mock)
 
@@ -560,10 +577,8 @@ def test_call_tsne(mocker):
         ]
     )
     mock.assert_called_once_with(
-        "MOCK_SIMILAR",
+        symbol="MOCK_SIMILAR",
         lr=100,
-        no_plot=True,
-        num_tickers=5,
     )
 
 

@@ -3,9 +3,12 @@ import pytest
 from openbb_terminal.cryptocurrency.overview import blockchaincenter_view
 
 
-@pytest.mark.vcr
-@pytest.mark.record_stdout
-def test_get_altcoin_index(mocker):
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
-    blockchaincenter_view.get_altcoin_index(365, 1_601_596_800, 1_641_573_787)
+@pytest.mark.record_http
+@pytest.mark.parametrize(
+    "period, start_date, end_date",
+    [
+        (30, "2021-01-01", "2021-01-10"),
+    ],
+)
+def test_display_altcoin_index(period, start_date, end_date):
+    blockchaincenter_view.display_altcoin_index(period, start_date, end_date)

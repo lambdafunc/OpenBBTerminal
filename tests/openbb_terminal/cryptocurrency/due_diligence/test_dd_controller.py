@@ -1,17 +1,26 @@
 # IMPORTATION STANDARD
+
 import os
+from typing import List
 
 # IMPORTATION THIRDPARTY
 import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.cryptocurrency.due_diligence import dd_controller
 
 # pylint: disable=E1101
 # pylint: disable=W0603
 # pylint: disable=E1111
 
+MESSARI_TIMESERIES_DF = pd.DataFrame()
+
+TOKENTERMINAL_PROJECTS: List[str] = list()
 
 COIN_MAP_DF = pd.Series(
     data={
@@ -53,7 +62,7 @@ COINBASE_SHOW_AVAILABLE_PAIRS_OF_GIVEN_SYMBOL = (
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -65,6 +74,19 @@ def test_menu_with_queue(expected, mocker, queue):
         target=f"{path_controller}.DueDiligenceController.switch",
         return_value=["quit"],
     )
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
     result_menu = dd_controller.DueDiligenceController(queue=queue).menu()
 
     assert result_menu == expected
@@ -75,9 +97,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.cryptocurrency.due_diligence.dd_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -86,12 +110,17 @@ def test_menu_without_queue_completion(mocker):
         target="openbb_terminal.parent_classes.session.prompt",
         return_value="quit",
     )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=dd_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -100,10 +129,30 @@ def test_menu_without_queue_completion(mocker):
         target=f"{path_controller}.session.prompt",
         return_value="quit",
     )
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
+    )
 
-    result_menu = dd_controller.DueDiligenceController(queue=None).menu()
+    # MOCK TOKEN TERMINAL get_project_ids
+    mocker.patch(
+        target=f"{path_controller}.tokenterminal_model.get_project_ids",
+        return_value=TOKENTERMINAL_PROJECTS,
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
 
-    assert result_menu == []
+    controller = dd_controller.DueDiligenceController(
+        symbol="BTC",
+        queue=None,
+    )
+
+    result_menu = controller.menu()
+
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -115,10 +164,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.cryptocurrency.due_diligence.dd_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=dd_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -127,6 +177,20 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     # MOCK USER INPUT
     mocker.patch("builtins.input", return_value=mock_input)
+
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
 
     # MOCK SWITCH
     class SystemExitSideEffect:
@@ -144,15 +208,38 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         target=f"{path_controller}.DueDiligenceController.switch",
         new=mock_switch,
     )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
 
     result_menu = dd_controller.DueDiligenceController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.record_stdout
-def test_print_help():
+def test_print_help(mocker):
+    path_controller = "openbb_terminal.cryptocurrency.due_diligence.dd_controller"
+
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
     controller = dd_controller.DueDiligenceController(queue=None)
     controller.print_help()
 
@@ -172,7 +259,23 @@ def test_print_help():
         ),
     ],
 )
-def test_switch(an_input, expected_queue):
+def test_switch(an_input, expected_queue, mocker):
+    path_controller = "openbb_terminal.cryptocurrency.due_diligence.dd_controller"
+
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
+
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
     controller = dd_controller.DueDiligenceController(queue=None)
     queue = controller.switch(an_input=an_input)
 
@@ -183,6 +286,22 @@ def test_switch(an_input, expected_queue):
 def test_call_cls(mocker):
     mocker.patch("os.system")
 
+    path_controller = "openbb_terminal.cryptocurrency.due_diligence.dd_controller"
+
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
+
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
     controller = dd_controller.DueDiligenceController(queue=None)
     controller.call_cls([])
 
@@ -216,7 +335,21 @@ def test_call_cls(mocker):
         ),
     ],
 )
-def test_call_func_expect_queue(expected_queue, func, queue):
+def test_call_func_expect_queue(expected_queue, func, queue, mocker):
+    path_controller = "openbb_terminal.cryptocurrency.due_diligence.dd_controller"
+
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges", return_value=["BITCOIN"]
+    )
     controller = dd_controller.DueDiligenceController(queue=queue)
     result = getattr(controller, func)([])
 
@@ -253,6 +386,20 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             "call_eb",
             [],
             "glassnode_view.display_exchange_balances",
+            [],
+            dict(),
+        ),
+        (
+            "call_fundrate",
+            [],
+            "coinglass_view.display_funding_rate",
+            [],
+            dict(),
+        ),
+        (
+            "call_liquidations",
+            [],
+            "coinglass_view.display_liquidations",
             [],
             dict(),
         ),
@@ -320,16 +467,16 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             dict(),
         ),
         (
-            "call_binbook",
+            "call_ob",
             [],
-            "binance_view.display_order_book",
+            "ccxt_view.display_order_book",
             [],
             dict(),
         ),
         (
-            "call_cbbook",
+            "call_trades",
             [],
-            "coinbase_view.display_order_book",
+            "ccxt_view.display_trades",
             [],
             dict(),
         ),
@@ -337,13 +484,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             "call_balance",
             [],
             "binance_view.display_balance",
-            [],
-            dict(),
-        ),
-        (
-            "call_trades",
-            [],
-            "coinbase_view.display_trades",
             [],
             dict(),
         ),
@@ -403,6 +543,21 @@ def test_call_func(
 ):
     path_controller = "openbb_terminal.cryptocurrency.due_diligence.dd_controller"
 
+    # MOCK GET_COINGECKO_ID
+    mocker.patch(
+        target=f"{path_controller}.cryptocurrency_helpers.get_coingecko_id",
+        return_value=True,
+    )
+
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_exchanges",
+        return_value=["ABC"],
+    )
+    mocker.patch(
+        target=f"{path_controller}.ccxt_model.get_binance_currencies",
+        return_value=["BITCOIN"],
+    )
+
     # MOCK SHOW_AVAILABLE_PAIRS_FOR_GIVEN_SYMBOL
     mocker.patch(
         target=f"{path_controller}.binance_model.show_available_pairs_for_given_symbol",
@@ -413,6 +568,12 @@ def test_call_func(
     mocker.patch(
         target=f"{path_controller}.coinbase_model.show_available_pairs_for_given_symbol",
         return_value=COINBASE_SHOW_AVAILABLE_PAIRS_OF_GIVEN_SYMBOL,
+    )
+
+    # MOCK MESSARI_TIMESERIES_DF
+    mocker.patch(
+        target=f"{path_controller}.messari_model.get_available_timeseries",
+        return_value=MESSARI_TIMESERIES_DF,
     )
 
     if mocked_func:

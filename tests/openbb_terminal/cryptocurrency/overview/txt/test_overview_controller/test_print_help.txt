@@ -1,36 +1,26 @@
-
-[CoinGecko]
-    cgglobal          global crypto market info
-    cgdefi            global DeFi market info
-    cgstables         stablecoins
-    cgexchanges       top crypto exchanges
-    cgexrates         coin exchange rates
-    cgplatforms       crypto financial platforms
-    cgproducts        crypto financial products
-    cgindexes         crypto indexes
-    cgderivatives     crypto derivatives
-    cgcategories      crypto categories
-    cghold            ethereum, bitcoin holdings overview statistics
-    hm                crypto heatmap
-[CoinPaprika]
-    cpglobal          global crypto market info
-    cpinfo            basic info about all coins available
-    cpmarkets         market related info about all coins available
-    cpexchanges       list all exchanges
-    cpexmarkets       all available markets on given exchange
-    cpplatforms       list blockchain platforms eg. ethereum, solana, kusama, terra
-    cpcontracts       all smart contracts for given platform
-[Coinbase]
-    cbpairs           info about available trading pairs
-[CryptoPanic]
-    news              recent crypto news
-[WithdrawalFees]
-    wf                overall withdrawal fees
-    ewf               overall exchange withdrawal fees
-    wfpe              crypto withdrawal fees per exchange
-[BlockchainCenter]
-    altindex          display altcoin season index (if 75% of top 50 coins perform better than BTC)
-    btcrb             display bitcoin rainbow price chart (logarithmic regression)
-[Rekt]
-    ch                lists major crypto-related hacks
+    global             global crypto market statistics                                      [CoinGecko, CoinPaprika]
+    defi               global DeFi market info                                              [CoinGecko]
+    stables            stablecoins                                                          [CoinGecko]
+    exchanges          crypto/ov/exchanges                                                  [CoinGecko, CoinPaprika]
+    exrates            coin exchange rates                                                  [CoinGecko]
+    indexes            crypto indexes                                                       [CoinGecko]
+    derivatives        crypto derivatives                                                   [CoinGecko]
+    categories         crypto categories                                                    [CoinGecko]
+    hold               ethereum, bitcoin holdings overview statistics                       [CoinGecko]
+    hm                 crypto heatmap                                                       [CoinGecko]
+    info               basic info about all coins available                                 [CoinPaprika]
+    markets            market related info about all coins available                        [CoinPaprika]
+    exmarkets          all available markets on given exchange                              [CoinPaprika]
+    platforms          list blockchain platforms eg. ethereum, solana, kusama, terra        [CoinPaprika]
+    contracts          all smart contracts for given platform                               [CoinPaprika]
+    pairs              info about available trading pairs                                   [Coinbase]
+    news               recent crypto news                                                   [CryptoPanic]
+    wf                 overall withdrawal fees                                              [WithdrawalFees]
+    ewf                overall exchange withdrawal fees                                     [WithdrawalFees]
+    wfpe               crypto withdrawal fees per exchange                                  [WithdrawalFees]
+    altindex           altcoin season index (75% of top 50 coins perform better than BTC)   [BlockchainCenter]
+    btcrb              display bitcoin rainbow price chart (logarithmic regression)         [BlockchainCenter]
+    ch                 lists major crypto-related hacks                                     [Rekt]
+    cr                 crypto supply or borrow interest rates                               [LoanScan]
+    fun                explore projects based on fundamental metrics                        [TokenTerminal]
 

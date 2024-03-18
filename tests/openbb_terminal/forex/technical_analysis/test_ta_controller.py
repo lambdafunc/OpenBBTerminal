@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 from datetime import datetime
 
@@ -7,6 +8,10 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.forex.technical_analysis import ta_controller
 
 # pylint: disable=E1101
@@ -36,7 +41,7 @@ def vcr_config():
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -52,7 +57,7 @@ def test_menu_with_queue(expected, mocker, queue):
     result_menu = ta_controller.TechnicalAnalysisController(
         ticker="MOCK_TICKER",
         start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
-        source="yf",
+        source="YahooFinance",
         interval="MOCK_INTERVAL",
         data=MOCK_STOCK_DF,
         queue=queue,
@@ -66,9 +71,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.forex.technical_analysis.ta_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -81,10 +88,11 @@ def test_menu_without_queue_completion(mocker):
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=ta_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -96,14 +104,14 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = ta_controller.TechnicalAnalysisController(
         ticker="MOCK_TICKER",
-        source="yf",
+        source="YahooFinance",
         start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
         interval="MOCK_INTERVAL",
         data=MOCK_STOCK_DF,
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -115,10 +123,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.forex.technical_analysis.ta_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=ta_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -147,14 +156,14 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = ta_controller.TechnicalAnalysisController(
         ticker="MOCK_TICKER",
-        source="yf",
+        source="YahooFinance",
         start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
         interval="MOCK_INTERVAL",
         data=MOCK_STOCK_DF,
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -168,7 +177,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 def test_print_help(start):
     controller = ta_controller.TechnicalAnalysisController(
         ticker="MOCK_TICKER",
-        source="yf",
+        source="YahooFinance",
         start=start,
         interval="MOCK_INTERVAL",
         data=MOCK_STOCK_DF,
@@ -210,7 +219,7 @@ def test_print_help(start):
 def test_switch(an_input, expected_queue):
     controller = ta_controller.TechnicalAnalysisController(
         ticker="MOCK_FROM/MOCK_TO",
-        source="yf",
+        source="YahooFinance",
         start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
         interval="MOCK_INTERVAL",
         data=MOCK_STOCK_DF,
@@ -226,7 +235,7 @@ def test_call_cls(mocker):
     mocker.patch("os.system")
     controller = ta_controller.TechnicalAnalysisController(
         ticker="MOCK_TICKER/MOCK_TICKER",
-        source="yf",
+        source="YahooFinance",
         start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
         interval="MOCK_INTERVAL",
         data=MOCK_STOCK_DF,
@@ -286,7 +295,7 @@ def test_call_cls(mocker):
 def test_call_func_expect_queue(expected_queue, func, queue):
     controller = ta_controller.TechnicalAnalysisController(
         ticker="MOCK_FROM/MOCK_TO",
-        source="yf",
+        source="YahooFinance",
         start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
         interval="MOCK_INTERVAL",
         data=MOCK_STOCK_DF,
@@ -429,8 +438,8 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             "call_bbands",
             [
                 "1",
-                "--std=2",
-                "--mamode=MOCK_MAMODE",
+                "--std=1.0",
+                "--mamode=ema",
                 "--export=csv",
             ],
             "volatility_view.display_bbands",
@@ -476,7 +485,7 @@ def test_call_func(
 
         controller = ta_controller.TechnicalAnalysisController(
             ticker="MOCK_FROM/MOCK_TO",
-            source="yf",
+            source="YahooFinance",
             start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
             interval="MOCK_INTERVAL",
             data=MOCK_STOCK_DF,
@@ -492,7 +501,7 @@ def test_call_func(
     else:
         controller = ta_controller.TechnicalAnalysisController(
             ticker="MOCK_FROM/MOCK_TO",
-            source="yf",
+            source="YahooFinance",
             start=datetime.strptime("2021-12-01", "%Y-%m-%d"),
             interval="MOCK_INTERVAL",
             data=MOCK_STOCK_DF,

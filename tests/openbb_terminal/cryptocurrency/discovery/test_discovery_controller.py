@@ -1,10 +1,12 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import PreferencesModel, copy_user
 from openbb_terminal.cryptocurrency.discovery import discovery_controller
 
 # pylint: disable=E1101
@@ -16,7 +18,7 @@ from openbb_terminal.cryptocurrency.discovery import discovery_controller
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -38,9 +40,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.cryptocurrency.discovery.discovery_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -51,10 +55,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=discovery_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -66,7 +71,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = discovery_controller.DiscoveryController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -78,10 +83,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.cryptocurrency.discovery.discovery_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=discovery_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -110,7 +116,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = discovery_controller.DiscoveryController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -192,72 +198,86 @@ def test_call_func_expect_queue(expected_queue, func, queue):
     "tested_func, other_args, mocked_func, called_args, called_kwargs",
     [
         (
-            "call_cgtop",
-            ["stablecoins"],
+            "call_top",
+            ["stablecoins", "--source=CoinGecko"],
             "pycoingecko_view.display_coins",
             [],
             dict(),
         ),
         (
-            "call_drdapps",
+            "call_dapp_categories",
             [],
-            "dappradar_view.display_top_dapps",
-            [],
-            dict(),
-        ),
-        (
-            "call_drgames",
-            [],
-            "dappradar_view.display_top_games",
+            "dappradar_view.display_dapp_categories",
             [],
             dict(),
         ),
         (
-            "call_drdex",
+            "call_dapp_chains",
             [],
-            "dappradar_view.display_top_dexes",
-            [],
-            dict(),
-        ),
-        (
-            "call_drnft",
-            [],
-            "dappradar_view.display_top_nfts",
+            "dappradar_view.display_dapp_chains",
             [],
             dict(),
         ),
         (
-            "call_cggainers",
+            "call_nft_mktp",
+            [],
+            "dappradar_view.display_nft_marketplaces",
+            [],
+            dict(),
+        ),
+        (
+            "call_gainers",
             [],
             "pycoingecko_view.display_gainers",
             [],
             dict(),
         ),
         (
-            "call_cglosers",
+            "call_losers",
             [],
             "pycoingecko_view.display_losers",
             [],
             dict(),
         ),
         (
-            "call_cgtrending",
+            "call_trending",
             [],
             "pycoingecko_view.display_trending",
             [],
             dict(),
         ),
         (
-            "call_cmctop",
-            [],
+            "call_top",
+            ["--source=CoinMarketCap"],
             "coinmarketcap_view.display_cmc_top_coins",
             [],
             dict(),
         ),
         (
-            "call_cpsearch",
+            "call_search",
             ["MOCK_QUERY"],
             "coinpaprika_view.display_search_results",
+            [],
+            dict(),
+        ),
+        (
+            "call_nft_mktp_chains",
+            [],
+            "dappradar_view.display_nft_marketplace_chains",
+            [],
+            dict(),
+        ),
+        (
+            "call_defi_chains",
+            [],
+            "dappradar_view.display_defi_chains",
+            [],
+            dict(),
+        ),
+        (
+            "call_tokens",
+            [],
+            "dappradar_view.display_token_chains",
             [],
             dict(),
         ),

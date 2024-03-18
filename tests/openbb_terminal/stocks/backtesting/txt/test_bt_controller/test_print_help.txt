@@ -1,9 +1,10 @@
-
 Ticker: TSLA
 
-    whatif      what if you had bought X shares on day Y
+    load               load a specific stock ticker for analysis                       [YahooFinance, AlphaVantage, Polygon, EODHD]
 
-    ema         buy when price exceeds EMA(l)
-    ema_cross   buy when EMA(short) > EMA(long)
-    rsi         buy when RSI < low and sell when RSI > high
-        
+    whatif             what if you had bought X shares on day Y                        [YahooFinance]
+
+    ema                buy when price exceeds EMA(l)
+    emacross           buy when EMA(short) > EMA(long)
+    rsi                buy when RSI < low and sell when RSI > high
+

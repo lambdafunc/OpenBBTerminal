@@ -1,10 +1,15 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.cryptocurrency.nft import nft_controller
 
 # pylint: disable=E1101
@@ -16,12 +21,17 @@ from openbb_terminal.cryptocurrency.nft import nft_controller
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
 def test_menu_with_queue(expected, mocker, queue):
     path_controller = "openbb_terminal.cryptocurrency.nft.nft_controller"
+
+    # MOCK GET_COLLECTION_SLUGS
+    mocker.patch(
+        target=f"{path_controller}.nftpricefloor_model.get_collection_slugs",
+    )
 
     # MOCK SWITCH
     mocker.patch(
@@ -37,10 +47,17 @@ def test_menu_with_queue(expected, mocker, queue):
 def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.cryptocurrency.nft.nft_controller"
 
-    # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    # MOCK GET_COLLECTION_SLUGS
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target=f"{path_controller}.nftpricefloor_model.get_collection_slugs",
+    )
+
+    # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -51,10 +68,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=nft_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -66,7 +84,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = nft_controller.NFTController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -77,11 +95,17 @@ def test_menu_without_queue_completion(mocker):
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.cryptocurrency.nft.nft_controller"
 
+    # MOCK GET_COLLECTION_SLUGS
+    mocker.patch(
+        target=f"{path_controller}.nftpricefloor_model.get_collection_slugs",
+    )
+
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=nft_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -110,12 +134,17 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = nft_controller.NFTController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.record_stdout
-def test_print_help():
+def test_print_help(mocker):
+    # MOCK GET_COLLECTION_SLUGS
+    mocker.patch(
+        target="openbb_terminal.cryptocurrency.nft.nft_controller.nftpricefloor_model.get_collection_slugs",
+    )
+
     controller = nft_controller.NFTController(queue=None)
     controller.print_help()
 
@@ -135,7 +164,11 @@ def test_print_help():
         ),
     ],
 )
-def test_switch(an_input, expected_queue):
+def test_switch(an_input, expected_queue, mocker):
+    # MOCK GET_COLLECTION_SLUGS
+    mocker.patch(
+        target="openbb_terminal.cryptocurrency.nft.nft_controller.nftpricefloor_model.get_collection_slugs",
+    )
     controller = nft_controller.NFTController(queue=None)
     queue = controller.switch(an_input=an_input)
 
@@ -145,6 +178,11 @@ def test_switch(an_input, expected_queue):
 @pytest.mark.vcr(record_mode="none")
 def test_call_cls(mocker):
     mocker.patch("os.system")
+
+    # MOCK GET_COLLECTION_SLUGS
+    mocker.patch(
+        target="openbb_terminal.cryptocurrency.nft.nft_controller.nftpricefloor_model.get_collection_slugs",
+    )
 
     controller = nft_controller.NFTController(queue=None)
     controller.call_cls([])
@@ -179,7 +217,12 @@ def test_call_cls(mocker):
         ),
     ],
 )
-def test_call_func_expect_queue(expected_queue, func, queue):
+def test_call_func_expect_queue(expected_queue, func, queue, mocker):
+    # MOCK GET_COLLECTION_SLUGS
+    mocker.patch(
+        target="openbb_terminal.cryptocurrency.nft.nft_controller.nftpricefloor_model.get_collection_slugs",
+    )
+
     controller = nft_controller.NFTController(queue=queue)
     result = getattr(controller, func)([])
 
@@ -199,30 +242,16 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             dict(),
         ),
         (
-            "call_today",
+            "call_collections",
             [],
-            "nftcalendar_view.display_nft_today_drops",
-            [],
-            dict(),
-        ),
-        (
-            "call_upcoming",
-            [],
-            "nftcalendar_view.display_nft_upcoming_drops",
+            "nftpricefloor_view.display_collections",
             [],
             dict(),
         ),
         (
-            "call_ongoing",
-            [],
-            "nftcalendar_view.display_nft_ongoing_drops",
-            [],
-            dict(),
-        ),
-        (
-            "call_newest",
-            [],
-            "nftcalendar_view.display_nft_newest_drops",
+            "call_fp",
+            ["MOCK_SLUG"],
+            "nftpricefloor_view.display_floor_price",
             [],
             dict(),
         ),
@@ -232,6 +261,11 @@ def test_call_func(
     tested_func, mocked_func, other_args, called_args, called_kwargs, mocker
 ):
     path_controller = "openbb_terminal.cryptocurrency.nft.nft_controller"
+
+    mocker.patch(
+        target=f"{path_controller}.nftpricefloor_model.get_collection_slugs",
+        return_value=["MOCK_SLUG"],
+    )
 
     if mocked_func:
         mock = mocker.Mock()

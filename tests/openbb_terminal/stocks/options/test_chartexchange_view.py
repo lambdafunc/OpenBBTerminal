@@ -1,11 +1,15 @@
 # IMPORTATION STANDARD
 
+
 # IMPORTATION THIRDPARTY
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.stocks.options import chartexchange_view
-from openbb_terminal import helper_funcs
 
 
 @pytest.fixture(scope="module")
@@ -19,24 +23,21 @@ def vcr_config():
 @pytest.mark.vcr
 @pytest.mark.record_stdout
 @pytest.mark.parametrize(
-    "tab",
+    "raw",
     [True, False],
 )
-def test_display_raw(mocker, tab):
+def test_display_raw(mocker, raw):
     # MOCK CHARTS
-    mocker.patch.object(
-        target=helper_funcs.obbff,
-        attribute="USE_TABULATE_DF",
-        new=tab,
+    preferences = PreferencesModel(USE_TABULATE_DF=raw)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
 
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
+    # MOCK PLOT_CHART
+    mocker.patch(target="openbb_terminal.stocks.options.chartexchange_view.plot_chart")
 
     chartexchange_view.display_raw(
-        export="",
-        ticker="GME",
-        date="2021-02-05",
-        call=True,
-        price="90",
+        export="", symbol="GME", expiry="2021-02-05", call=True, price=90, raw=raw
     )

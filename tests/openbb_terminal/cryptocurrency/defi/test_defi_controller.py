@@ -1,10 +1,15 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.cryptocurrency.defi import defi_controller
 
 # pylint: disable=E1101
@@ -16,7 +21,7 @@ from openbb_terminal.cryptocurrency.defi import defi_controller
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -38,9 +43,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.cryptocurrency.defi.defi_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -51,10 +58,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=defi_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -66,7 +74,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = defi_controller.DefiController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -78,10 +86,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.cryptocurrency.defi.defi_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=defi_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -110,7 +119,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = defi_controller.DefiController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -192,23 +201,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
     "tested_func, other_args, mocked_func, called_args, called_kwargs",
     [
         (
-            "call_aterra",
-            [
-                "ust",
-                "--address=terra1wg2mlrxdmnnkkykgqg4znky86nyrtc45q336yv",  # pragma: allowlist secret
-            ],
-            "terraengineer_view.display_terra_asset_history",
-            [],
-            dict(),
-        ),
-        (
-            "call_ayr",
-            [],
-            "terraengineer_view.display_anchor_yield_reserve",
-            [],
-            dict(),
-        ),
-        (
             "call_sinfo",
             ["terra1wg2mlrxdmnnkkykgqg4znky86nyrtc45q336yv"],
             "terramoney_fcd_view.display_account_staking_info",
@@ -219,13 +211,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             "call_validators",
             [],
             "terramoney_fcd_view.display_validators",
-            [],
-            dict(),
-        ),
-        (
-            "call_govp",
-            [],
-            "terramoney_fcd_view.display_gov_proposals",
             [],
             dict(),
         ),
@@ -247,13 +232,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             "call_sreturn",
             [],
             "terramoney_fcd_view.display_staking_returns_history",
-            [],
-            dict(),
-        ),
-        (
-            "call_dpi",
-            [],
-            "defipulse_view.display_defipulse",
             [],
             dict(),
         ),
@@ -286,65 +264,9 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             dict(),
         ),
         (
-            "call_funding",
-            [],
-            "defirate_view.display_funding_rates",
-            [],
-            dict(),
-        ),
-        (
-            "call_borrow",
-            [],
-            "defirate_view.display_borrow_rates",
-            [],
-            dict(),
-        ),
-        (
-            "call_lending",
-            [],
-            "defirate_view.display_lending_rates",
-            [],
-            dict(),
-        ),
-        (
             "call_newsletter",
             [],
             "substack_view.display_newsletters",
-            [],
-            dict(),
-        ),
-        (
-            "call_tokens",
-            [],
-            "graph_view.display_uni_tokens",
-            [],
-            dict(),
-        ),
-        (
-            "call_stats",
-            [],
-            "graph_view.display_uni_stats",
-            [],
-            dict(),
-        ),
-        (
-            "call_pairs",
-            [],
-            "graph_view.display_recently_added",
-            [],
-            dict(),
-        ),
-        (
-            "call_pools",
-            [],
-            "graph_view.display_uni_pools",
-            [],
-            dict(),
-        ),
-        (
-            "call_swaps",
-            [],
-            "graph_view.display_last_uni_swaps",
             [],
             dict(),
         ),

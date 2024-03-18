@@ -1,7 +1,7 @@
 # IMPORTATION STANDARD
-import datetime
 
 # IMPORTATION THIRDPARTY
+import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
@@ -34,8 +34,8 @@ def test_output(func, kwargs_dict, recorder):
 @pytest.mark.parametrize(
     "func, kwargs_dict",
     [
-        ("get_series_notes", {"series_term": "finance"}),
-        ("get_series_data", {"series_id": "DGS10", "start": "2020-01-01"}),
+        ("get_series_notes", {"search_query": "finance"}),
+        ("get_series_data", {"series_id": "DGS10", "start_date": "2020-01-01"}),
     ],
 )
 def test_check_output(func, kwargs_dict, recorder):
@@ -62,7 +62,7 @@ def test_invalid_response_status(func, kwargs_dict, mocker):
     mock_response = mocker.Mock(**attrs)
 
     mocker.patch(
-        target="requests.get",
+        target="openbb_terminal.helper_funcs.requests.get",
         new=mocker.Mock(return_value=mock_response),
     )
 
@@ -73,7 +73,7 @@ def test_invalid_response_status(func, kwargs_dict, mocker):
 @pytest.mark.vcr
 @pytest.mark.parametrize(
     "func, kwargs_dict",
-    [("get_series_data", {"series_id": "DGS10", "start": "2020-01-01"})],
+    [("get_series_data", {"series_id": "DGS10", "start_date": "2020-01-01"})],
 )
 def test_load_data(func, kwargs_dict, recorder):
     result_df = getattr(fred_model, func)(**kwargs_dict)
@@ -82,30 +82,51 @@ def test_load_data(func, kwargs_dict, recorder):
     recorder.capture(result_df)
 
 
-@pytest.mark.skip(reason="Date needs to be mocked.")
 @pytest.mark.vcr
-@pytest.mark.parametrize("date", [datetime.datetime(2022, 3, 21, 0, 0)])
-def test_yield_curve(date, recorder):
-    result_df, returned_date = fred_model.get_yield_curve(date)
-    assert date.strftime("%Y-%m-%d") == returned_date.strftime("%Y-%m-%d")
-    assert not result_df.empty
+@pytest.mark.parametrize(
+    "func, kwargs_dict",
+    [
+        ("get_cpi", {"countries": ["united kingdom"]}),
+        ("get_cpi", {"countries": ["united kingdom", "united_states"]}),
+        ("get_cpi", {"countries": ["united kingdom", "united_states", "belgium"]}),
+        (
+            "get_cpi",
+            {"countries": ["united kingdom", "united_states"], "frequency": "monthly"},
+        ),
+        (
+            "get_cpi",
+            {
+                "countries": ["united kingdom", "united_states"],
+                "units": "growth_previous",
+            },
+        ),
+        (
+            "get_cpi",
+            {"countries": ["united kingdom", "united_states"], "harmonized": True},
+        ),
+        (
+            "get_cpi",
+            {
+                "countries": ["united kingdom", "united_states"],
+                "units": "growth_previous",
+            },
+        ),
+    ],
+)
+def test_get_cpi(func, kwargs_dict, recorder):
+    result_df = getattr(fred_model, func)(**kwargs_dict)
+
+    assert isinstance(result_df, pd.DataFrame)
     recorder.capture(result_df)
 
 
-@pytest.mark.skip(reason="Date needs to be mocked.")
 @pytest.mark.vcr
-@pytest.mark.parametrize("date", [datetime.datetime(2021, 7, 17, 0, 0)])
-def test_yield_curve_weekend(date):
-    result_df, returned_date = fred_model.get_yield_curve(date)
-    assert date.strftime("%Y-%m-%d") == returned_date
-    assert result_df.empty
+def test_EQUITY_INDICES(recorder):
+    assert isinstance(fred_model.EQUITY_INDICES, dict)
+    recorder.capture(fred_model.EQUITY_INDICES)
 
 
-@pytest.mark.skip(reason="Date needs to be mocked.")
 @pytest.mark.vcr
-@pytest.mark.parametrize("date", [None])
-def test_yield_curve_none(date, recorder):
-    result_df, returned_date = fred_model.get_yield_curve(date)
-    assert returned_date.strftime("%Y-%m-%d") == "2022-03-21"
-    assert not result_df.empty
-    recorder.capture(result_df)
+@pytest.mark.record_stdout
+def test_get_usd_liquidity_BAD_SYMBOL():
+    fred_model.get_usd_liquidity("BAD_SYMBOL")

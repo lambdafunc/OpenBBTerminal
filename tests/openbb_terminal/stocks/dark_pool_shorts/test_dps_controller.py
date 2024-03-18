@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 from datetime import datetime
 
@@ -7,6 +8,10 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.stocks import stocks_helper
 from openbb_terminal.stocks.dark_pool_shorts import dps_controller
 
@@ -32,7 +37,7 @@ def vcr_config():
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -57,9 +62,11 @@ def test_menu_with_queue(expected, mocker, queue):
 @pytest.mark.vcr(record_mode="none")
 def test_menu_without_queue_completion(mocker):
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -70,10 +77,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=dps_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.dark_pool_shorts.dps_controller.session",
@@ -90,7 +98,7 @@ def test_menu_without_queue_completion(mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -100,10 +108,11 @@ def test_menu_without_queue_completion(mocker):
 )
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=dps_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.dark_pool_shorts.dps_controller.session",
@@ -140,7 +149,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -246,10 +255,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--limit=1",
                 "--export=csv",
             ],
-            dict(
-                num_stocks=1,
-                export="csv",
-            ),
+            dict(limit=1, export="csv", sheet_name=None),
         ),
         (
             "call_hsi",
@@ -258,10 +264,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--limit=1",
                 "--export=csv",
             ],
-            dict(
-                num=1,
-                export="csv",
-            ),
+            dict(limit=1, export="csv", sheet_name=None),
         ),
         (
             "call_prom",
@@ -272,12 +275,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--tier=T1",
                 "--export=csv",
             ],
-            dict(
-                num=1,
-                promising=2,
-                tier="T1",
-                export="csv",
-            ),
+            dict(num=1, limit=2, tier="T1", export="csv", sheet_name=None),
         ),
         (
             "call_pos",
@@ -285,15 +283,10 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             [
                 "--limit=1",
                 "--sort=sv",
-                "--ascending",
+                "--reverse",
                 "--export=csv",
             ],
-            dict(
-                num=1,
-                sort_field="sv",
-                ascending=True,
-                export="csv",
-            ),
+            dict(limit=1, sortby="sv", ascend=True, export="csv", sheet_name=None),
         ),
         (
             "call_sidtc",
@@ -303,44 +296,39 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--sort=si",
                 "--export=csv",
             ],
-            dict(
-                num=1,
-                sort_field="si",
-                export="csv",
-            ),
+            dict(limit=1, sortby="si", export="csv", sheet_name=None),
         ),
         (
             "call_psi",
             "quandl_view.short_interest",
             [
-                "quandl",
+                "MOCK_TICKER",
                 "--nyse",
-                "--number=1",
+                "--source=Quandl",
+                "--limit=1",
                 "--raw",
                 "--export=csv",
             ],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 nyse=True,
-                days=1,
+                limit=1,
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
             "call_psi",
             "stockgrid_view.short_interest_volume",
             [
-                "--number=1",
-                "--source=stockgrid",
+                "--limit=1",
+                "--source=Stockgrid",
                 "--raw",
                 "--export=csv",
             ],
             dict(
-                ticker="MOCK_TICKER",
-                num=1,
-                raw=True,
-                export="csv",
+                symbol="MOCK_TICKER", limit=1, raw=True, export="csv", sheet_name=None
             ),
         ),
         (
@@ -349,10 +337,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             [
                 "--export=csv",
             ],
-            dict(
-                ticker="MOCK_TICKER",
-                export="csv",
-            ),
+            dict(symbol="MOCK_TICKER", export="csv", sheet_name=None),
         ),
         (
             "call_ftd",
@@ -365,13 +350,18 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--export=csv",
             ],
             dict(
-                ticker="MOCK_TICKER",
-                stock=empty_df,
-                start=datetime.strptime("2020-12-01", "%Y-%m-%d"),
-                end=datetime.strptime("2020-12-02", "%Y-%m-%d"),
-                num=1,
+                symbol="MOCK_TICKER",
+                data=empty_df,
+                start_date=datetime.strptime("2020-12-01", "%Y-%m-%d").strftime(
+                    "%Y-%m-%d"
+                ),
+                end_date=datetime.strptime("2020-12-02", "%Y-%m-%d").strftime(
+                    "%Y-%m-%d"
+                ),
+                limit=1,
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -383,31 +373,29 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--export=csv",
             ],
             dict(
-                ticker="MOCK_TICKER",
-                num=10,
-                raw=True,
-                export="csv",
+                symbol="MOCK_TICKER", limit=10, raw=True, export="csv", sheet_name=None
             ),
         ),
-        (
-            "call_volexch",
-            "nyse_view.display_short_by_exchange",
-            [
-                "--raw",
-                "--sort=Date",
-                "--asc",
-                "--mpl",
-                "--export=csv",
-            ],
-            dict(
-                ticker="MOCK_TICKER",
-                raw=True,
-                sort="Date",
-                asc=True,
-                mpl=True,
-                export="csv",
-            ),
-        ),
+        # (
+        #     "call_volexch",
+        #     "nyse_view.display_short_by_exchange",
+        #     [
+        #         "--raw",
+        #         "--sort=Date",
+        #         "--asc",
+        #         "--mpl",
+        #         "--export=csv",
+        #     ],
+        #     dict(
+        #         ticker="MOCK_TICKER",
+        #         raw=True,
+        #         sort="Date",
+        #         asc=True,
+        #         mpl=True,
+        #         export="csv",
+        #         sheet_name=None
+        #     ),
+        # ),
     ],
 )
 def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
@@ -425,6 +413,8 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
     getattr(controller, tested_func)(other_args=other_args)
 
     if isinstance(called_with, dict):
+        if "num" in called_with:
+            called_with["input_limit"] = called_with.pop("num")
         mock.assert_called_once_with(**called_with)
     elif isinstance(called_with, list):
         mock.assert_called_once_with(*called_with)
@@ -445,12 +435,12 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
         "call_dpotc",
         "call_ftd",
         "call_spos",
-        "call_volexch",
+        #        "call_volexch",
     ],
 )
 def test_call_func_no_parser(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.dark_pool_shorts.dps_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.dark_pool_shorts.dps_controller.DarkPoolShortsController.parse_known_args_and_warn",
         return_value=None,
     )
     controller = dps_controller.DarkPoolShortsController(
@@ -462,7 +452,7 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(dps_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -473,12 +463,12 @@ def test_call_func_no_parser(func, mocker):
         "call_ftd",
         "call_spos",
         "call_psi",
-        "call_volexch",
+        #        "call_volexch",
     ],
 )
 def test_call_func_no_ticker(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.dark_pool_shorts.dps_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.dark_pool_shorts.dps_controller.DarkPoolShortsController.parse_known_args_and_warn",
         return_value=True,
     )
     controller = dps_controller.DarkPoolShortsController(
@@ -490,7 +480,7 @@ def test_call_func_no_ticker(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(dps_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr

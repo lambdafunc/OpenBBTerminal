@@ -9,27 +9,27 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - python-requests/2.27.1
+      - python-requests/2.28.2
     method: GET
     uri: https://api.coingecko.com/api/v3/search/trending
   response:
     body:
       string: !!binary |
-        H4sIADmE9WEAA5zWW2/aMBQA4Pf+iirPEHyL7fAyVVM7bWthAqY9TBUywYOUXFAS1E0V/32+pGlS
-        QFA/tUpOzjnxl2P8cuVFeZyV3vD694sXVzL1hurv0ht6oqyKvHwWW69nYub6KuQc0p6XiVSqkBsd
-        MrUh5b90kSf64nQ2GasLqSg2sppHYjsvRLbxhpTznletd+lCRa2ralsOBwNRlrIqfV1gJaNNrv5L
-        B6alQZyKlSwHpuTAPDcwPfnbbPUJUowDQHkAdO1UJIlDUvPcqaSJKFbSIal57mSnyW71bm23RRzJ
-        +aKKvCHyIcEhBQHjkCCCoewDtdpllBeqE7Df994ZPefZUhaJyJZdJIjekH61Yxql2deH22NIkGE3
-        JFWyRqriVPo/Rl/0mwOKYEigo5HOaY2O53Qh0jkt0Yk+rVBnZVtEwAcQQkwDRAMYhoQSwhsheCj0
-        R2RVnrZ1CACwwbl7vd3A3M0ejrmg0IVF16pVbCX7RQYBBzAAkDq5mKSW5VTSj8OYpNblZKdWplnR
-        lkrgU0wUIcABDgjEWA1O0LCgQ5YkzzdlIdTdlgxC5uuvae51yMSGNDr34/H36dG5AcAFyJSshaK4
-        iBLZXyQi2vRRQOvdg0AVAqnbPmfzW6zz+T/OZvNbtwv6t4Ltxe+OlvoIUAgRU5sgJ5CDgJBGER8q
-        FnkWZx1BlSFsBCf17UZvMh4dtaPEyU4Xq+2SfJXPi3yXLedJvFpX/tNWmpfH6n3UF+yGZwpYvAsK
-        OOiZAlbvkjewfK+r3qJjPlZzakYVhYCxsDN/5FCukkUh+skuE20+jjhp9GY6pDN7P0c3x/icdkZd
-        6tVOdaE2GoYQIwxSiuuthzJIGGDIyc7kr+nO5/84nclfy13Qv5XrrPq7yVO/aVRPHqcY6Rl8G7zg
-        kE9mT3Gm++kcOyBAjd6tjrj+nHcH8Hb07ejJ0IlQ16sJTT99fbevv+N6AdTbq5MX426nD53dAp7N
-        7nAO0dkt3/neLd5bXBeP+GqXJIqbMIYI4rwze3S/f+xdefJvtBaqGXPQf7za/wcAAP//AwDv3M4d
-        +AsAAA==
+        H4sIAJVp/2MAA5yW3W6bQBCF7/MUEdcG7z+7vqkiJa0iVXXUpFGVKrIw2RBkMJbBVZPI755hF2OI
+        7TjdKxt29sxhPmbY1xMvLtJ56Y1O/7x6aaVzbwS/D97Ie0mTlyjxiTcwIZP6JhGY4YE3j3INEXdp
+        chclsF4+59Miq+/cwVUeLWe6msTRYrKM5jNvhBHmA696WuVTiHmqqkU5Gg6jstRVGdTaiY5nBfzL
+        h8bMMM2jRJdDk21o9g3BzQTsBF+w4IIwyQWrE+dRljlomn0HNLNomWgHTbPvkM9slbQlhevFMo31
+        ZFrFUJyAMMxCpDihknCGuPYRlKuMiyXYQOv14B0YyLyCpQ4WjChnLZZ0fg3rp+f6a9plc/3r58U+
+        OlSGLnBMzgZOViSFnyz1sx+nyzjTwWKeQAEwUxgxJJxAWX0L6rj+/0Oz+hbaJ/xbgLb0/oN+TN9T
+        hEghBacs5CHiYU0xbCniXYrloigy/yEq/KqY6XmvyzCnpMV5XQeenp+NezCvxuPv+2gqrpxarU7Z
+        0DTOmhJQRaWUSLn1mhG1CA+IOjSbEbXcDjm1sHYr3AOmMKOUYYyIkoIi2ms7sgtsmhXxrKyieNZj
+        hYTaoqpXyx6nm9/7KDHiBAlyNYxspkn94k4eV9mmCAieh3CM3HDV8pbWcXkHcLW85fYJ9w3CTUE7
+        5FgAzBiTguBQEIlwnxzdJVcsqjRPy7zHjRO2HZnjbUSLbny1j5xETuTqbA26Ta7moQVSiHHl2GFG
+        1zI7rOvAyuhaWB/4tZA65e1gQgFCCONQwUcwlIpxoULBWkxsz0QEOyvImVbPc131ByKV2ybbhv24
+        uOkSO/t2ubfbQuk2EqncTMSeM1sIDm8gfLS562gE8WYyHhF3GZEg3kzIY86bPntf+g5IElBMQiWx
+        EoJRQN8/oPBdkH+jtOjxwxS2twBvm+WW2+3Z5T5s0OBOB5M6WQMOlMc3Zs5sPunwAIIzxyOJUbbU
+        PlJ2OIwYZYvsQ88W16bAHUoiIIIIEULfIs4lr4eiaCGJ9fp+cOLpf/FTBB7Mcf/+ZP0GAAD//wMA
+        5O6sVv4LAAA=
     headers:
       Access-Control-Allow-Headers:
       - Origin, X-Requested-With, Content-Type, Accept, Authorization
@@ -42,15 +42,15 @@ interactions:
       Access-Control-Request-Method:
       - '*'
       Age:
-      - '31'
+      - '37'
       Alternate-Protocol:
       - 443:npn-spdy/2
       CF-Cache-Status:
       - HIT
       CF-RAY:
-      - 6d5472c72bc63322-CDG
+      - 7a124c6d18c303e6-LIS
       Cache-Control:
-      - max-age=30, public, must-revalidate, s-maxage=600
+      - public, max-age=120
       Connection:
       - keep-alive
       Content-Encoding:
@@ -58,21 +58,37 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Sat, 29 Jan 2022 18:15:52 GMT
+      - Wed, 01 Mar 2023 15:05:30 GMT
       ETag:
-      - W/"ef77ba29cb5a2d2cd2b4a73fc135acb3"
-      Expect-CT:
-      - max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      - W/"198cbfa64429ea4a4b10357d92cd157e"
+      Expires:
+      - Wed, 01 Mar 2023 15:07:30 GMT
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=HTWey2IyV2gKWAn9kKFSWqzHmCw2._W8EFFz409tVw8-1677683130-0-Abyma/ug5ST8EuI97BsDkKSH3LCVAuvGSSokpDqeWo05o5wRtM5kdWUgPp0rpVqinlXvpjpz5ODAW1J6y4uaZRA=;
+        path=/; expires=Wed, 01-Mar-23 15:35:30 GMT; domain=.api.coingecko.com; HttpOnly;
+        Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       Vary:
       - Accept-Encoding, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
       X-Request-Id:
-      - 1b8b8bfc-295c-4d0e-982a-287a86302baf
+      - 4d54777e-0e72-4933-9062-82ac971796e9
       X-Runtime:
-      - '0.016249'
+      - '0.011230'
+      X-XSS-Protection:
+      - '0'
     status:
       code: 200
       message: OK

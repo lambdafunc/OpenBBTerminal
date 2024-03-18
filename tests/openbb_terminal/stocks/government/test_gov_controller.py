@@ -1,12 +1,18 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
 import pytest
 
-# IMPORTATION INTERNAL
-from openbb_terminal.stocks.government import gov_controller
 from openbb_terminal import parent_classes
+
+# IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
+from openbb_terminal.stocks.government import gov_controller
 
 # pylint: disable=E1101
 # pylint: disable=W0603
@@ -28,7 +34,7 @@ def vcr_config():
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -50,9 +56,11 @@ def test_menu_with_queue(expected, mocker, queue):
 @pytest.mark.vcr(record_mode="none")
 def test_menu_without_queue_completion(mocker):
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -63,10 +71,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=gov_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.government.gov_controller.session",
@@ -81,7 +90,7 @@ def test_menu_without_queue_completion(mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -91,10 +100,11 @@ def test_menu_without_queue_completion(mocker):
 )
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=gov_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.government.gov_controller.session",
@@ -128,7 +138,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -224,10 +234,11 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "quiverquant_view.display_contracts",
             ["--past_transaction_days=5", "--raw", "--export=csv"],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 past_transaction_days=5,
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -240,11 +251,12 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--export=csv",
             ],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 gov_type="congress",
                 past_transactions_months=5,
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -252,7 +264,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "quiverquant_view.display_hist_contracts",
             ["--raw", "--export=csv"],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 raw=True,
                 export="csv",
             ),
@@ -263,9 +275,10 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             ["--past_transaction_days=2", "--limit=5", "--sum", "--export=csv"],
             dict(
                 past_transaction_days=2,
-                num=5,
+                limit=5,
                 sum_contracts=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -279,9 +292,10 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             ],
             dict(
                 gov_type="congress",
-                past_days=5,
+                limit=5,
                 representative="MOCK_TEXT",
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -289,20 +303,15 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "quiverquant_view.display_lobbying",
             ["--limit=5"],
             dict(
-                ticker="MOCK_TICKER",
-                num=5,
+                symbol="MOCK_TICKER",
+                limit=5,
             ),
         ),
         (
             "call_qtrcontracts",
             "quiverquant_view.display_qtr_contracts",
             ["--limit=5", "--analysis=total", "--raw", "--export=csv"],
-            dict(
-                analysis="total",
-                num=5,
-                raw=True,
-                export="csv",
-            ),
+            dict(analysis="total", limit=5, raw=True, export="csv", sheet_name=None),
         ),
         (
             "call_topbuys",
@@ -317,9 +326,10 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             dict(
                 gov_type="congress",
                 past_transactions_months=2,
-                num=5,
+                limit=5,
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -327,7 +337,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "quiverquant_view.display_top_lobbying",
             ["--limit=5", "--raw", "--export=csv"],
             dict(
-                num=5,
+                limit=5,
                 raw=True,
                 export="csv",
             ),
@@ -345,9 +355,10 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             dict(
                 gov_type="congress",
                 past_transactions_months=2,
-                num=5,
+                limit=5,
                 raw=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
     ],
@@ -361,9 +372,7 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
     controller = gov_controller.GovController(ticker="MOCK_TICKER")
     getattr(controller, tested_func)(other_args=other_args)
 
-    if isinstance(called_with, dict):
-        mock.assert_called_once_with(**called_with)
-    elif isinstance(called_with, list):
+    if isinstance(called_with, (dict, list)):
         mock.assert_called_once_with(**called_with)
     else:
         mock.assert_called_once()
@@ -387,7 +396,7 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
 )
 def test_call_func_no_parser(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.government.gov_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.government.gov_controller.GovController.parse_known_args_and_warn",
         return_value=None,
     )
     controller = gov_controller.GovController(ticker="AAPL")
@@ -395,7 +404,7 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(gov_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -410,7 +419,7 @@ def test_call_func_no_parser(func, mocker):
 )
 def test_call_func_no_ticker(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.government.gov_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.government.gov_controller.GovController.parse_known_args_and_warn",
         return_value=True,
     )
     controller = gov_controller.GovController(ticker=None)
@@ -418,7 +427,7 @@ def test_call_func_no_ticker(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(gov_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr
@@ -436,6 +445,7 @@ def test_call_load(mocker):
     other_args = [
         "TSLA",
         "--start=2021-12-17",
+        "--source=YahooFinance",
     ]
     controller.call_load(other_args=other_args)
 

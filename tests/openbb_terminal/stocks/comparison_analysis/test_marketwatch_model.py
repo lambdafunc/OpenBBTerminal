@@ -18,13 +18,13 @@ def vcr_config():
 @pytest.mark.parametrize(
     "timeframe, quarter",
     [
-        ("31-Dec-2020", True),
+        ("31-Dec-2021", True),
         ("2020", False),
     ],
 )
 def test_get_financial_comparisons(quarter, timeframe, recorder):
     result_df = marketwatch_model.get_financial_comparisons(
-        all_stocks=["TSLA", "GM"],
+        symbols=["TSLA", "GM"],
         data="income",
         timeframe=timeframe,
         quarter=quarter,

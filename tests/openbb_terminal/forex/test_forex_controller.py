@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
@@ -6,6 +7,10 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.forex import forex_controller
 from openbb_terminal.forex.technical_analysis.ta_controller import (
     TechnicalAnalysisController,
@@ -37,6 +42,7 @@ def vcr_config():
             ("period1", "MOCK_PERIOD_1"),
             ("period2", "MOCK_PERIOD_2"),
             ("date", "MOCK_DATE"),
+            ("apiKey", "MOCK_API_KEY"),
         ],
     }
 
@@ -45,7 +51,7 @@ def vcr_config():
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -67,9 +73,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.forex.forex_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -80,10 +88,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=forex_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -95,7 +104,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = forex_controller.ForexController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -107,10 +116,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.forex.forex_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=forex_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -139,7 +149,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = forex_controller.ForexController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -232,8 +242,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
 @pytest.mark.parametrize(
     "tested_func, other_args, mocked_func, called_args, called_kwargs",
     [
-        ("call_to", ["GBP"], None, [], dict()),
-        ("call_from", ["EUR"], None, [], dict()),
         (
             "call_ta",
             None,
@@ -248,7 +256,7 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             [TechnicalAnalysisController],
             dict(
                 ticker="MOCK_TICKER/MOCK_TICKER",
-                source="yf",
+                source="YahooFinance",
                 data=NON_EMPTY_DF,
                 start=pd.Timestamp("2020-11-30 00:00:00"),
                 interval="",
@@ -278,8 +286,10 @@ def test_call_func(
 
         controller = forex_controller.ForexController(queue=None)
         controller.data = NON_EMPTY_DF
+        controller.fx_pair = "MOCK_TICKER"
         controller.to_symbol = "MOCK_TICKER"
         controller.from_symbol = "MOCK_TICKER"
+        controller.source = "YahooFinance"
         controller.interval = ""
 
         getattr(controller, tested_func)(other_args)
@@ -291,7 +301,7 @@ def test_call_func(
     else:
         controller = forex_controller.ForexController(queue=None)
         controller.stock = EMPTY_DF
-        controller.source = "yf"
+        controller.source = "YahooFinance"
         controller.to_symbol = "MOCK_TICKER"
         controller.from_symbol = "MOCK_TICKER"
         controller.interval = "1440min"
@@ -303,8 +313,6 @@ def test_call_func(
 @pytest.mark.parametrize(
     "func",
     [
-        "call_from",
-        "call_to",
         "call_load",
         "call_candle",
     ],
@@ -312,7 +320,7 @@ def test_call_func(
 def test_call_func_no_parser(func, mocker):
     # MOCK PARSE_KNOWN_ARGS_AND_WARN
     mocker.patch(
-        target="openbb_terminal.forex.forex_controller.parse_known_args_and_warn",
+        target="openbb_terminal.forex.forex_controller.ForexController.parse_known_args_and_warn",
         return_value=None,
     )
     controller = forex_controller.ForexController(queue=None)
@@ -320,7 +328,7 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(forex_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -330,13 +338,12 @@ def test_call_func_no_parser(func, mocker):
         "call_candle",
         "call_ta",
         "call_qa",
-        "call_pred",
     ],
 )
 def test_call_func_no_ticker(func, mocker):
     # MOCK PARSE_KNOWN_ARGS_AND_WARN
     mocker.patch(
-        "openbb_terminal.forex.forex_controller.parse_known_args_and_warn",
+        target="openbb_terminal.forex.forex_controller.ForexController.parse_known_args_and_warn",
         return_value=True,
     )
 
@@ -349,39 +356,47 @@ def test_call_func_no_ticker(func, mocker):
 
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
-    "from_symbol, to_symbol, expected",
+    "fx_pair, expected",
     [
-        (None, None, []),
-        ("MOCK_FROM", None, []),
-        (None, "MOCK_TO", []),
-        ("MOCK_FROM", "MOCK_TO", ["forex", "from MOCK_FROM", "to MOCK_TO"]),
+        (None, []),
+        ("MOCK_FX_PAIR", ["forex", "load MOCK_FX_PAIR"]),
     ],
 )
-def test_custom_reset(from_symbol, to_symbol, expected):
+def test_custom_reset(fx_pair, expected):
     controller = forex_controller.ForexController(queue=None)
-    controller.from_symbol = from_symbol
-    controller.to_symbol = to_symbol
+    controller.fx_pair = fx_pair
 
     result = controller.custom_reset()
 
     assert result == expected
 
 
-# @pytest.mark.vcr
-# def test_call_load(mocker):
-#     # FORCE SINGLE THREADING
-#     yf_download = forex_controller.forex_helper.yf.download
+@pytest.mark.vcr
+@pytest.mark.parametrize(
+    "other_args",
+    [
+        (
+            [
+                "--ticker=EURUSD",
+                "--start=2022-01-01",
+                "--end=2023-01-01",
+            ]
+        ),
+        (
+            [
+                "--ticker=EURUSD",
+                "--start=2023-01-01",
+                "--end=2022-01-01",
+            ]
+        ),
+    ],
+)
+def test_call_load(other_args, recorder):
+    controller = forex_controller.ForexController(queue=None)
+    controller.call_load(other_args=other_args)
 
-#     def mock_yf_download(*args, **kwargs):
-#         kwargs["threads"] = False
-#         return yf_download(*args, **kwargs)
-
-#     mocker.patch("yfinance.download", side_effect=mock_yf_download)
-
-#     controller = forex_controller.ForexController(queue=None)
-#     other_args = [
-#         "TSLA",
-#         "--start=2021-12-17",
-#         "--end=2021-12-18",
-#     ]
-#     controller.call_load(other_args=other_args)
+    recorder.capture(controller.data)
+    assert isinstance(controller.data, pd.DataFrame)
+    assert {"Open", "High", "Low", "Close", "Adj Close", "Volume"}.issubset(
+        set(controller.data.columns)
+    )

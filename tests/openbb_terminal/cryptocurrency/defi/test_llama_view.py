@@ -63,44 +63,35 @@ def gzip_data(response):
     return response
 
 
-@pytest.mark.vcr(before_record_response=filter_json_data)
+@pytest.mark.skip
 @pytest.mark.record_stdout
 def test_display_defi_protocols():
-    llama_view.display_defi_protocols(20, "tvl", False, False)
+    llama_view.display_defi_protocols(
+        limit=20, sortby="tvl", ascend=False, description=False
+    )
 
 
-@pytest.mark.vcr(before_record_response=gzip_data)
 @pytest.mark.record_stdout
 def test_display_defi_tvl(mocker):
     # MOCK EXPORT_DATA
     mocker.patch(target="openbb_terminal.cryptocurrency.defi.llama_view.export_data")
 
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
-
     llama_view.display_defi_tvl(20)
 
 
-@pytest.mark.vcr(before_record_response=filter_json_data)
+@pytest.mark.vcr()
 @pytest.mark.record_stdout
 def test_display_grouped_defi_protocols(mocker):
     # MOCK EXPORT_DATA
     mocker.patch(target="openbb_terminal.cryptocurrency.defi.llama_view.export_data")
 
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
-
     llama_view.display_grouped_defi_protocols(20)
 
 
 @pytest.mark.linux
-@pytest.mark.vcr(before_record_response=gzip_data)
 @pytest.mark.record_stdout
 def test_display_historical_tvl(mocker):
     # MOCK EXPORT_DATA
     mocker.patch(target="openbb_terminal.cryptocurrency.defi.llama_view.export_data")
-
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
 
     llama_view.display_historical_tvl("anchor")

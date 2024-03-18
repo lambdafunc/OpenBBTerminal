@@ -1,4 +1,7 @@
+>   covid              COVID menu,                 cases, deaths, rates
+>   oss                Open Source menu,           star history, repos information
+>   realestate         Real Estate menu,           sold prices, HPIs
+>   companieshouse     Companies House menu,       UK company information
 
->   covid     COVID menu,                    e.g.: cases, deaths, rates
->   oss       Open Source menu,              e.g.: star history, repos information
-        
+    hn                 Hacker News most popular stories                                [HackerNews]
+

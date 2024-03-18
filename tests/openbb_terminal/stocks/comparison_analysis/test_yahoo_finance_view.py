@@ -30,12 +30,30 @@ def test_display_historical(mocker):
 
     mocker.patch("yfinance.download", side_effect=mock_yf_download)
 
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
+    yahoo_finance_view.display_historical(
+        similar=["TSLA", "GM"],
+        start_date=datetime.strptime("2020-12-21", "%Y-%m-%d"),
+        candle_type="o",
+        normalize=True,
+        export="",
+    )
+
+
+@pytest.mark.vcr
+def test_display_historical_with_end(mocker):
+    # FORCE SINGLE THREADING
+    yf_download = yahoo_finance_view.yahoo_finance_model.yf.download
+
+    def mock_yf_download(*args, **kwargs):
+        kwargs["threads"] = False
+        return yf_download(*args, **kwargs)
+
+    mocker.patch("yfinance.download", side_effect=mock_yf_download)
 
     yahoo_finance_view.display_historical(
-        similar_tickers=["TSLA", "GM"],
-        start=datetime.strptime("2020-12-21", "%Y-%m-%d"),
+        similar=["TSLA", "GM"],
+        start_date=datetime.strptime("2020-12-21", "%Y-%m-%d"),
+        end_date=datetime.strptime("2022-04-01", "%Y-%m-%d"),
         candle_type="o",
         normalize=True,
         export="",
@@ -53,12 +71,9 @@ def test_display_volume(mocker):
 
     mocker.patch("yfinance.download", side_effect=mock_yf_download)
 
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
-
     yahoo_finance_view.display_volume(
-        similar_tickers=["TSLA", "GM"],
-        start=datetime.strptime("2020-12-21", "%Y-%m-%d"),
+        similar=["TSLA", "GM"],
+        start_date=datetime.strptime("2020-12-21", "%Y-%m-%d"),
         export="",
     )
 
@@ -74,11 +89,8 @@ def test_display_correlation(mocker):
 
     mocker.patch("yfinance.download", side_effect=mock_yf_download)
 
-    # MOCK VISUALIZE_OUTPUT
-    mocker.patch(target="openbb_terminal.helper_classes.TerminalStyle.visualize_output")
-
     yahoo_finance_view.display_correlation(
-        similar_tickers=["TSLA", "GM"],
-        start=datetime.strptime("2020-12-21", "%Y-%m-%d"),
+        similar=["TSLA", "GM"],
+        start_date=datetime.strptime("2020-12-21", "%Y-%m-%d"),
         candle_type="o",
     )

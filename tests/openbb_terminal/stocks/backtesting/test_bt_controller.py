@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
@@ -6,6 +7,10 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.stocks.backtesting import bt_controller
 
 # pylint: disable=E1101
@@ -13,13 +18,14 @@ from openbb_terminal.stocks.backtesting import bt_controller
 # pylint: disable=E1111
 
 EMPTY_DF = pd.DataFrame()
+NOT_EMPTY_DF = pd.DataFrame({"A": [1, 2, 3]})
 
 
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["ema", "help"], []),
+        (["ema", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -43,9 +49,11 @@ def test_menu_with_queue(expected, mocker, queue):
 @pytest.mark.vcr(record_mode="none")
 def test_menu_without_queue_completion(mocker):
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -56,10 +64,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=bt_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.backtesting.bt_controller.session",
@@ -75,7 +84,7 @@ def test_menu_without_queue_completion(mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -85,10 +94,11 @@ def test_menu_without_queue_completion(mocker):
 )
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=bt_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.backtesting.bt_controller.session",
@@ -124,7 +134,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -224,17 +234,18 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "bt_view.display_simple_ema",
             ["-l=2", "--spy", "--no_bench", "--export=csv"],
             dict(
-                ticker="MOCK_TICKER",
-                df_stock=EMPTY_DF,
+                symbol="MOCK_TICKER",
+                data=NOT_EMPTY_DF,
                 ema_length=2,
                 spy_bt=True,
                 no_bench=True,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
-            "call_ema_cross",
-            "bt_view.display_ema_cross",
+            "call_emacross",
+            "bt_view.display_emacross",
             [
                 "-l=2",
                 "--long=10",
@@ -245,14 +256,15 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--export=csv",
             ],
             dict(
-                ticker="MOCK_TICKER",
-                df_stock=EMPTY_DF,
+                symbol="MOCK_TICKER",
+                data=NOT_EMPTY_DF,
                 short_ema=20,
                 long_ema=10,
                 spy_bt=True,
                 no_bench=True,
                 shortable=False,
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -268,8 +280,8 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 "--export=csv",
             ],
             dict(
-                ticker="MOCK_TICKER",
-                df_stock=EMPTY_DF,
+                symbol="MOCK_TICKER",
+                data=NOT_EMPTY_DF,
                 periods=2,
                 low_rsi=20,
                 high_rsi=10,
@@ -277,6 +289,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
                 no_bench=True,
                 shortable=False,
                 export="csv",
+                sheet_name=None,
             ),
         ),
     ],
@@ -290,7 +303,7 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
     EMPTY_DF.drop(EMPTY_DF.index, inplace=True)
     controller = bt_controller.BacktestingController(
         ticker="MOCK_TICKER",
-        stock=EMPTY_DF,
+        stock=NOT_EMPTY_DF,
     )
     getattr(controller, tested_func)(other_args=other_args)
 
@@ -307,13 +320,13 @@ def test_call_func(tested_func, mocked_func, other_args, called_with, mocker):
     "func",
     [
         "call_ema",
-        "call_ema_cross",
+        "call_emacross",
         "call_rsi",
     ],
 )
 def test_call_func_no_parser(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.backtesting.bt_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.backtesting.bt_controller.BacktestingController.parse_known_args_and_warn",
         return_value=None,
     )
     controller = bt_controller.BacktestingController(
@@ -324,7 +337,7 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert not controller.queue
-    getattr(bt_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr(record_mode="none")

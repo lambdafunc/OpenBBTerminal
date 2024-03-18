@@ -9,72 +9,68 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - python-requests/2.27.1
+      - python-requests/2.28.1
     method: GET
     uri: https://api.coinpaprika.com/v1/coins/eth-ethereum/
   response:
     body:
       string: !!binary |
-        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
-        AgAA//+C2POqlhAAAA==
+        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
     headers:
       Accept-Ranges:
       - bytes
       CF-Cache-Status:
-      - MISS
+      - EXPIRED
       CF-RAY:
-      - 6d5cb3790d3f3ae3-CDG
+      - 76a9184d9a72da82-LIS
+      Cache-Control:
+      - public, max-age=60, s-maxage=60, stale-while-revalidate=10, stale-if-error=600
       Connection:
       - keep-alive
+      Content-Encoding:
+      - gzip
       Content-Length:
-      - '1552'
-      Content-Security-Policy-Report-Only:
-      - script-src 'none'; report-uri /cdn-cgi/script_monitor/report?m=S8XqBwUqMVucyl1Cx0ofoM_X0KjrlDH8E.EL1bYqtdU-1643566688-0-AfXUOGakySCg9-S7XIuf90rcc965E5-Xx_W2UWCizx7UDm7dt20aoK6l7dBF0oNMCIh_AvIR1dfWh072uXCh5Y4
+      - '1476'
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Sun, 30 Jan 2022 18:18:08 GMT
-      Expect-CT:
-      - max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      - Tue, 15 Nov 2022 15:42:07 GMT
+      H-Hap:
+      - '01'
       Last-Modified:
-      - Sun, 30 Jan 2022 18:18:08 GMT
+      - Tue, 15 Nov 2022 15:40:45 GMT
       Server:
       - cloudflare
-      alt-svc:
-      - h3=":443"; ma=86400, h3-29=":443"; ma=86400
-      cache-control:
-      - public, max-age=60, s-maxage=60, stale-while-revalidate=10, stale-if-error=600
-      content-encoding:
-      - gzip
-      vary:
+      Vary:
       - Accept-Encoding
       - Origin
+      alt-svc:
+      - h3=":443"; ma=86400, h3-29=":443"; ma=86400
     status:
       code: 200
       message: OK

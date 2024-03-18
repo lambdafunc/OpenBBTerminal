@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 from datetime import datetime
 
@@ -7,8 +8,9 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
-from openbb_terminal.stocks.behavioural_analysis import ba_controller
 from openbb_terminal import parent_classes
+from openbb_terminal.core.session.current_user import PreferencesModel, copy_user
+from openbb_terminal.stocks.behavioural_analysis import ba_controller
 
 # pylint: disable=E1101
 # pylint: disable=W0603
@@ -32,7 +34,7 @@ def vcr_config():
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -56,9 +58,11 @@ def test_menu_with_queue(expected, mocker, queue):
 @pytest.mark.vcr(record_mode="none")
 def test_menu_without_queue_completion(mocker):
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -69,10 +73,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=ba_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.behavioural_analysis.ba_controller.session",
@@ -88,7 +93,7 @@ def test_menu_without_queue_completion(mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -98,10 +103,11 @@ def test_menu_without_queue_completion(mocker):
 )
 def test_menu_without_queue_sys_exit(mock_input, mocker):
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=ba_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.stocks.behavioural_analysis.ba_controller.session",
@@ -137,7 +143,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
         queue=None,
     ).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -233,30 +239,6 @@ def test_call_func_expect_queue(expected_queue, queue, func):
     "tested_func, other_args, mocked_func, called_args, called_kwargs",
     [
         (
-            "call_watchlist",
-            ["--limit=2"],
-            "reddit_view.display_watchlist",
-            [],
-            dict(num=2),
-        ),
-        (
-            "call_spac",
-            ["--limit=2"],
-            "reddit_view.display_spac",
-            [],
-            dict(limit=2),
-        ),
-        (
-            "call_spac_c",
-            ["--limit=5", "--popular"],
-            "reddit_view.display_spac_community",
-            [],
-            dict(
-                limit=5,
-                popular=True,
-            ),
-        ),
-        (
             "call_wsb",
             ["--limit=5", "--new"],
             "reddit_view.display_wsb_community",
@@ -272,9 +254,11 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "reddit_view.display_popular_tickers",
             [],
             dict(
-                n_top=10,
-                posts_to_look_at=5,
+                limit=10,
+                post_limit=5,
                 subreddits="MOCK_SUB",
+                export="",
+                sheet_name=None,
             ),
         ),
         (
@@ -283,7 +267,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "stocktwits_view.display_bullbear",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
             ),
         ),
         (
@@ -292,7 +276,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "stocktwits_view.display_messages",
             [],
             dict(
-                ticker="MOCK_TICKER",
+                symbol="MOCK_TICKER",
                 limit=2,
             ),
         ),
@@ -314,36 +298,15 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             ),
         ),
         (
-            "call_infer",
-            ["--limit=20"],
-            "twitter_view.display_inference",
-            [],
-            dict(
-                ticker="MOCK_TICKER",
-                num=20,
-            ),
-        ),
-        (
-            "call_sentiment",
-            ["--limit=20", "--days=2", "--export=csv"],
-            "twitter_view.display_sentiment",
-            [],
-            dict(
-                ticker="MOCK_TICKER",
-                n_tweets=20,
-                n_days_past=2,
-                export="csv",
-            ),
-        ),
-        (
             "call_mentions",
             ["--start=2020-12-01", "--export=csv"],
             "google_view.display_mentions",
             [],
             dict(
-                ticker="MOCK_TICKER",
-                start=datetime.strptime("2020-12-01", "%Y-%m-%d"),
+                symbol="MOCK_TICKER",
+                start_date=datetime.strptime("2020-12-01", "%Y-%m-%d"),
                 export="csv",
+                sheet_name=None,
             ),
         ),
         (
@@ -351,82 +314,28 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             ["--limit=5", "--export=csv"],
             "google_view.display_regions",
             [],
-            dict(
-                ticker="MOCK_TICKER",
-                num=5,
-                export="csv",
-            ),
+            dict(symbol="MOCK_TICKER", limit=5, export="csv"),
         ),
         (
             "call_queries",
             ["--limit=5", "--export=csv"],
             "google_view.display_queries",
             [],
-            dict(
-                ticker="MOCK_TICKER",
-                num=5,
-                export="csv",
-            ),
+            dict(symbol="MOCK_TICKER", limit=5, export="csv", sheet_name=None),
         ),
         (
             "call_rise",
             ["--limit=5", "--export=csv"],
             "google_view.display_rise",
             [],
-            dict(
-                ticker="MOCK_TICKER",
-                num=5,
-                export="csv",
-            ),
+            dict(symbol="MOCK_TICKER", limit=5, export="csv", sheet_name=None),
         ),
         (
             "call_headlines",
-            ["--export=csv"],
+            ["--export=csv", "--raw"],
             "finbrain_view.display_sentiment_analysis",
             [],
-            dict(
-                ticker="MOCK_TICKER",
-                export="csv",
-            ),
-        ),
-        (
-            "call_hist",
-            [
-                "--start=2020-12-01",
-                "--end=2020-12-07",
-                "--export=csv",
-                "--number=100",
-                "--raw",
-                "--limit=10",
-            ],
-            "sentimentinvestor_view.display_historical",
-            [],
-            dict(
-                ticker="MOCK_TICKER",
-                start=datetime(2020, 12, 1),
-                end=datetime(2020, 12, 7),
-                number=100,
-                export="csv",
-                raw=True,
-                limit=10,
-            ),
-        ),
-        (
-            "call_trend",
-            [
-                "--start=2020-12-01",
-                "--hour=9",
-                "--export=csv",
-                "--number=20",
-            ],
-            "sentimentinvestor_view.display_trending",
-            [],
-            dict(
-                start=datetime(2020, 12, 1),
-                hour=9,
-                export="csv",
-                number=20,
-            ),
+            dict(symbol="MOCK_TICKER", raw=True, export="csv"),
         ),
         (
             "call_popular",
@@ -434,9 +343,7 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "reddit_view.display_popular_tickers",
             [],
             dict(
-                n_top=2,
-                posts_to_look_at=1,
-                subreddits="MOCK_SUB",
+                limit=2, post_limit=1, subreddits="MOCK_SUB", export="", sheet_name=None
             ),
         ),
         (
@@ -445,7 +352,6 @@ def test_call_func_expect_queue(expected_queue, queue, func):
             "reddit_view.display_due_diligence",
             [],
             dict(
-                ticker="MOCK_TICKER",
                 limit=1,
                 n_days=2,
                 show_all_flairs=True,
@@ -489,32 +395,26 @@ def test_call_func(
 @pytest.mark.parametrize(
     "func",
     [
-        "call_watchlist",
-        "call_spac",
-        "call_spac_c",
         "call_wsb",
         "call_popular",
         "call_bullbear",
         "call_messages",
         "call_trending",
         "call_stalker",
-        "call_infer",
-        "call_sentiment",
         "call_mentions",
         "call_regions",
         "call_queries",
         "call_rise",
         "call_headlines",
         "call_snews",
-        "call_hist",
-        "call_trend",
         "call_popular",
         "call_getdd",
     ],
 )
 def test_call_func_no_parser(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.behavioural_analysis.ba_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.behavioural_analysis.ba_controller.BehaviouralAnalysisController"
+        ".parse_known_args_and_warn",
         return_value=None,
     )
     controller = ba_controller.BehaviouralAnalysisController(
@@ -525,29 +425,26 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(ba_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "func",
     [
-        "call_hist",
         "call_headlines",
-        "call_sentiment",
-        "call_infer",
         "call_rise",
         "call_queries",
         "call_regions",
         "call_mentions",
         "call_messages",
         "call_bullbear",
-        "call_getdd",
     ],
 )
 def test_call_func_no_ticker(func, mocker):
     mocker.patch(
-        "openbb_terminal.stocks.behavioural_analysis.ba_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.behavioural_analysis.ba_controller"
+        ".BehaviouralAnalysisController.parse_known_args_and_warn",
         return_value=True,
     )
     controller = ba_controller.BehaviouralAnalysisController(
@@ -558,7 +455,7 @@ def test_call_func_no_ticker(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(ba_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr
@@ -577,5 +474,6 @@ def test_call_load(mocker):
     other_args = [
         "TSLA",
         "--start=2021-12-17",
+        "--source=YahooFinance",
     ]
     controller.call_load(other_args=other_args)

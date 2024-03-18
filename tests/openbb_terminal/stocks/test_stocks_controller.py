@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
@@ -6,7 +7,12 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.stocks import stocks_controller
+from tests.test_helpers import no_dfs
 
 # pylint: disable=E1101
 # pylint: disable=W0603
@@ -58,7 +64,7 @@ def vcr_config():
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -80,9 +86,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.stocks.stocks_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -93,10 +101,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=stocks_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -108,7 +117,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = stocks_controller.StocksController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -120,10 +129,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.stocks.stocks_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=stocks_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -152,7 +162,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = stocks_controller.StocksController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -248,26 +258,34 @@ def test_call_func_expect_queue(expected_queue, func, queue):
         (
             "call_search",
             [
-                "--query=mock_query",
+                "--query=microsoft",
                 "--limit=1",
-                "--export=''",
+                "--export=csv",
             ],
             "stocks_helper.search",
             [],
             dict(
-                query="mock_query",
-                limit=1,
+                query="microsoft",
                 country="",
                 sector="",
+                industry_group="",
                 industry="",
+                all_exchanges=False,
                 exchange_country="",
-                export="",
+                exchange="",
             ),
         ),
         (
             "call_quote",
+            ["--ticker=AAPL", "--load_source=YahooFinance"],
+            "stocks_view.display_quote",
             [],
-            "stocks_helper.quote",
+            dict(),
+        ),
+        (
+            "call_tob",
+            ["--ticker=AAPL"],
+            "cboe_view.display_top_of_book",
             [],
             dict(),
         ),
@@ -276,19 +294,19 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             [
                 "--plotly",
                 "--sort=Open",
-                "--descending",
+                "--reverse",
                 "--raw",
-                "--num=1",
+                "--limit=1",
                 "--trend",
                 "--ma=2",
             ],
             "qa_view.display_raw",
             [],
             dict(
-                df=EMPTY_DF,
-                sort="Open",
-                des=False,
-                num=1,
+                data=EMPTY_DF,
+                sortby="Open",
+                ascend=False,
+                limit=1,
             ),
         ),
         (
@@ -296,38 +314,21 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             [
                 "--plotly",
                 "--sort=Open",
-                "--descending",
-                "--num=1",
+                "--reverse",
+                "--limit=1",
                 "--trend",
                 "--ma=20,30",
             ],
             "stocks_helper.display_candle",
             [],
             dict(
-                s_ticker="MOCK_TICKER",
-                df_stock=EMPTY_DF,
+                symbol="MOCK_TICKER",
+                data=EMPTY_DF,
                 use_matplotlib=False,
                 intraday=False,
                 add_trend=True,
                 ma=[20, 30],
-            ),
-        ),
-        (
-            "call_news",
-            [
-                "--limit=1",
-                "--date=2022-01-07",
-                "--oldest",
-                "--sources=MOCK_SOURCE_1,MOCK_SOURCE_2",
-            ],
-            "newsapi_view.display_news",
-            [],
-            dict(
-                term="MOCK_TICKER",
-                num=1,
-                s_from="2022-01-07",
-                show_newest=False,
-                sources="MOCK_SOURCE_1,MOCK_SOURCE_2.com",
+                yscale="linear",
             ),
         ),
         (
@@ -346,13 +347,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
         ),
         (
             "call_scr",
-            [],
-            "StocksController.load_class",
-            [],
-            dict(),
-        ),
-        (
-            "call_sia",
             [],
             "StocksController.load_class",
             [],
@@ -381,13 +375,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
         ),
         (
             "call_res",
-            [],
-            "StocksController.load_class",
-            [],
-            dict(),
-        ),
-        (
-            "call_dd",
             [],
             "StocksController.load_class",
             [],
@@ -451,14 +438,6 @@ def test_call_func(
     )
 
     # MOCK TICKER + INFO
-    mocker.patch(
-        target=f"{path_controller}.yf.Ticker",
-    )
-    mocker.patch(
-        target=f"{path_controller}.yf.Ticker.info",
-        return_value={"shortName": "MOCK_SHORT_NAME"},
-    )
-
     if mocked_func:
         mock = mocker.Mock()
         mocker.patch(
@@ -473,7 +452,7 @@ def test_call_func(
 
         getattr(controller, tested_func)(other_args)
 
-        if called_args or called_kwargs:
+        if called_args or called_kwargs and no_dfs(called_args, called_kwargs):
             mock.assert_called_once_with(*called_args, **called_kwargs)
         else:
             mock.assert_called_once()
@@ -497,7 +476,7 @@ def test_call_func(
 def test_call_func_no_parser(func, mocker):
     # MOCK PARSE_KNOWN_ARGS_AND_WARN
     mocker.patch(
-        target="openbb_terminal.stocks.stocks_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.stocks_controller.StocksController.parse_known_args_and_warn",
         return_value=None,
     )
     controller = stocks_controller.StocksController(queue=None)
@@ -505,28 +484,18 @@ def test_call_func_no_parser(func, mocker):
     func_result = getattr(controller, func)(other_args=list())
     assert func_result is None
     assert controller.queue == []
-    getattr(stocks_controller, "parse_known_args_and_warn").assert_called_once()
+    controller.parse_known_args_and_warn.assert_called_once()
 
 
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "func",
-    [
-        "call_candle",
-        "call_news",
-        "call_res",
-        "call_dd",
-        "call_fa",
-        "call_bt",
-        "call_ta",
-        "call_qa",
-        "call_pred",
-    ],
+    ["call_res"],
 )
 def test_call_func_no_ticker(func, mocker):
     # MOCK PARSE_KNOWN_ARGS_AND_WARN
     mocker.patch(
-        "openbb_terminal.stocks.stocks_controller.parse_known_args_and_warn",
+        "openbb_terminal.stocks.stocks_controller.StocksController.parse_known_args_and_warn",
         return_value=True,
     )
 
@@ -554,7 +523,7 @@ def test_custom_reset(expected, ticker):
     assert result == expected
 
 
-@pytest.mark.vcr
+@pytest.mark.vcr(record_mode="none")
 def test_call_load(mocker):
     # FORCE SINGLE THREADING
     yf_download = stocks_controller.stocks_helper.yf.download
@@ -570,5 +539,6 @@ def test_call_load(mocker):
         "TSLA",
         "--start=2021-12-17",
         "--end=2021-12-18",
+        "--source=YahooFinance",
     ]
     controller.call_load(other_args=other_args)

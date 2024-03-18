@@ -1,22 +1,56 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
 import pytest
 
 # IMPORTATION INTERNAL
-from openbb_terminal.portfolio.portfolio_optimization import po_controller
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
+
+try:
+    from openbb_terminal.portfolio.portfolio_optimization import po_controller
+except ImportError:
+    pytest.skip(allow_module_level=True)
 
 # pylint: disable=E1101
 # pylint: disable=W0603
 # pylint: disable=E1111
 
 
+def test_update_runtime_choices(mocker):
+    mocker.patch(
+        "openbb_terminal.portfolio.portfolio_optimization.po_controller.session", True
+    )
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
+    )
+    cont = po_controller.PortfolioOptimizationController(
+        tickers=["TSLA", "AAPL"], portfolios={"port": 1}, categories={"cat": 1}
+    )
+    cont.update_runtime_choices()
+
+
+def test_custom_reset():
+    cont = po_controller.PortfolioOptimizationController()
+    cont.current_portfolio = {"po": 1}
+    cont.current_file = "somefile.csv"
+    command = cont.custom_reset()
+    assert command[2][:4] == "load"
+    assert command[3][:4] == "file"
+
+
 @pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -38,9 +72,11 @@ def test_menu_without_queue_completion(mocker):
     path_controller = "openbb_terminal.portfolio.portfolio_optimization.po_controller"
 
     # ENABLE AUTO-COMPLETION : HELPER_FUNCS.MENU
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
     mocker.patch(
-        target="openbb_terminal.feature_flags.USE_PROMPT_TOOLKIT",
-        new=True,
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target="openbb_terminal.parent_classes.session",
@@ -51,10 +87,11 @@ def test_menu_without_queue_completion(mocker):
     )
 
     # DISABLE AUTO-COMPLETION : CONTROLLER.COMPLETER
-    mocker.patch.object(
-        target=po_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=True,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -66,7 +103,7 @@ def test_menu_without_queue_completion(mocker):
 
     result_menu = po_controller.PortfolioOptimizationController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -78,10 +115,11 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.portfolio.portfolio_optimization.po_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=po_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
         target=f"{path_controller}.session",
@@ -110,7 +148,7 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = po_controller.PortfolioOptimizationController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -192,27 +230,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
     "tested_func, other_args, mocked_func, called_args, called_kwargs",
     [
         (
-            "call_select",
-            [],
-            "PortfolioOptimizationController.add_stocks",
-            [],
-            dict(),
-        ),
-        (
-            "call_add",
-            [],
-            "PortfolioOptimizationController.add_stocks",
-            [],
-            dict(),
-        ),
-        (
-            "call_rmv",
-            [],
-            "PortfolioOptimizationController.rmv_stocks",
-            [],
-            dict(),
-        ),
-        (
             "call_equal",
             [],
             "optimizer_view.display_equal_weight",
@@ -227,20 +244,6 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             dict(),
         ),
         (
-            "call_dividend",
-            [],
-            "optimizer_view.display_property_weighting",
-            [],
-            dict(),
-        ),
-        (
-            "call_property",
-            ["--property=open"],
-            "optimizer_view.display_property_weighting",
-            [],
-            dict(),
-        ),
-        (
             "call_maxsharpe",
             [],
             "optimizer_view.display_max_sharpe",
@@ -248,30 +251,9 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             dict(),
         ),
         (
-            "call_minvol",
+            "call_minrisk",
             [],
-            "optimizer_view.display_min_volatility",
-            [],
-            dict(),
-        ),
-        (
-            "call_maxquadutil",
-            [],
-            "optimizer_view.display_max_quadratic_utility",
-            [],
-            dict(),
-        ),
-        (
-            "call_effrisk",
-            [],
-            "optimizer_view.display_efficient_risk",
-            [],
-            dict(),
-        ),
-        (
-            "call_effret",
-            [],
-            "optimizer_view.display_efficient_return",
+            "optimizer_view.display_min_risk",
             [],
             dict(),
         ),
@@ -283,22 +265,99 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             dict(),
         ),
         (
-            "call_yolo",
+            "call_file",
+            ["-f=hello"],
+            "",
+            [],
+            dict(),
+        ),
+        (
+            "call_show",
+            ["-ct=ASSET_CLASS"],
+            "",
+            [],
+            dict(),
+        ),
+        (
+            "call_maxutil",
+            [],
+            "optimizer_view.display_max_util",
+            [],
+            dict(),
+        ),
+        (
+            "call_maxret",
+            [],
+            "optimizer_view.display_max_ret",
+            [],
+            dict(),
+        ),
+        (
+            "call_maxdiv",
+            [],
+            "optimizer_view.display_max_div",
+            [],
+            dict(),
+        ),
+        (
+            "call_maxdecorr",
+            [],
+            "optimizer_view.display_max_decorr",
+            [],
+            dict(),
+        ),
+        (
+            "call_blacklitterman",
+            [],
+            "optimizer_view.display_black_litterman",
+            [],
+            dict(),
+        ),
+        (
+            "call_riskparity",
+            [],
+            "optimizer_view.display_risk_parity",
+            [],
+            dict(),
+        ),
+        (
+            "call_relriskparity",
+            [],
+            "optimizer_view.display_rel_risk_parity",
+            [],
+            dict(),
+        ),
+        (
+            "call_hrp",
+            [],
+            "optimizer_view.display_hrp",
+            [],
+            dict(),
+        ),
+        (
+            "call_herc",
+            [],
+            "optimizer_view.display_herc",
+            [],
+            dict(),
+        ),
+        (
+            "call_nco",
+            [],
+            "optimizer_view.display_nco",
+            [],
+            dict(),
+        ),
+        (
+            "call_load",
             [],
             "",
             [],
             dict(),
         ),
         (
-            "add_stocks",
-            [],
-            "",
-            [],
-            dict(),
-        ),
-        (
-            "rmv_stocks",
-            [],
+            "call_plot",
+            ["-pf=[]"],
             "",
             [],
             dict(),

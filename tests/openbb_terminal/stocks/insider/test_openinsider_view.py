@@ -1,6 +1,7 @@
 # IMPORTATION STANDARD
 
 # IMPORTATION THIRDPARTY
+import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
@@ -32,11 +33,12 @@ def test_print_insider_filter(mocker):
     mocker.patch(target="openbb_terminal.stocks.insider.openinsider_view.export_data")
 
     openinsider_view.print_insider_filter(
-        preset_loaded="whales",
-        ticker="PM",
+        preset="whales",
+        symbol="PM",
         limit=5,
         links=False,
         export="csv",
+        sheet_name=None,
     )
 
 
@@ -49,8 +51,8 @@ def test_print_insider_filter_no_table(mocker):
     )
 
     openinsider_view.print_insider_filter(
-        preset_loaded="whales",
-        ticker="",
+        preset="whales",
+        symbol="",
         limit=10,
         links=False,
         export="",
@@ -82,14 +84,14 @@ def test_print_insider_data(color, mocker):
 @pytest.mark.vcr(record_mode="none")
 def test_print_insider_data_no_table(mocker):
     # MOCK GET
-    mocker.patch(target="requests.get")
-
-    # MOCK BEAUTIFULSOUP
-    mock_soup = mocker.Mock()
-    mocker.patch.object(target=mock_soup, attribute="find", return_value=None)
+    attrs = {"status_code": 200, "text": ""}
+    mock_response = mocker.Mock(**attrs)
     mocker.patch(
-        target="openbb_terminal.stocks.insider.openinsider_view.BeautifulSoup",
-        return_value=mock_soup,
+        "openbb_terminal.helper_funcs.requests.get", return_value=mock_response
+    )
+    mocker.patch(
+        target="openbb_terminal.stocks.insider.openinsider_model.pd.read_html",
+        return_value=[pd.DataFrame(columns=["1d", "1w", "1m", "6m"]) for _ in range(5)],
     )
 
     openinsider_view.print_insider_data(

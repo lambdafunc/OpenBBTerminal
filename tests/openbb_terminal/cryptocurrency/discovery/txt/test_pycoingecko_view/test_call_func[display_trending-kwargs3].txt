@@ -1,9 +1,8 @@
-       Symbol        Name Market Cap Rank
-0   astroswap   AstroSwap             688
-1  wonderland  Wonderland             173
-2      fantom      Fantom              29
-3   looksrare   LooksRare             100
-4       ronin       Ronin             164
-5  terra-luna       Terra               9
-6   enjincoin  Enjin Coin              69
-
+            Symbol            Name  market_cap Cap Rank
+0         zigzag-2          ZigZag                 1015
+1           insure     inSure DeFi                  387
+2  spool-dao-token       Spool DAO                  959
+3       blockstack          Stacks                   42
+4         optimism        Optimism                   80
+5   singularitynet  SingularityNET                   78
+6            vaiot           Vaiot                  621

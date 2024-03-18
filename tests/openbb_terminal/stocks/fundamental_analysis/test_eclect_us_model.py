@@ -21,9 +21,9 @@ def vcr_config():
 
 @pytest.mark.vcr
 def test_get_filings_analysis(recorder):
-    result_txt = eclect_us_model.get_filings_analysis(ticker="PM")
+    result = eclect_us_model.get_filings_analysis(symbol="PM")
 
-    recorder.capture(result_txt)
+    recorder.capture(result)
 
 
 @pytest.mark.vcr(record_mode="none")
@@ -31,9 +31,9 @@ def test_get_filings_analysis_invalid(mocker):
     mock_response = requests.Response()
     mock_response.status_code = 400
     mocker.patch(
-        target="requests.get",
+        target="openbb_terminal.helper_funcs.requests.get",
         new=mocker.Mock(return_value=mock_response),
     )
 
-    result = eclect_us_model.get_filings_analysis(ticker="PM")
-    assert result == ""
+    result = eclect_us_model.get_filings_analysis(symbol="PM")
+    assert result.empty

@@ -1,4 +1,5 @@
 # IMPORTATION STANDARD
+
 import os
 
 # IMPORTATION THIRDPARTY
@@ -6,6 +7,10 @@ import pandas as pd
 import pytest
 
 # IMPORTATION INTERNAL
+from openbb_terminal.core.session.current_user import (
+    PreferencesModel,
+    copy_user,
+)
 from openbb_terminal.cryptocurrency.overview import overview_controller
 
 # pylint: disable=E1101
@@ -96,11 +101,10 @@ GET_ALL_CONTRACT_PLATFORMS_DF = pd.DataFrame(
 )
 
 
-@pytest.mark.vcr(record_mode="none")
 @pytest.mark.parametrize(
     "queue, expected",
     [
-        (["load", "help"], []),
+        (["load", "help"], ["help"]),
         (["quit", "help"], ["help"]),
     ],
 )
@@ -117,7 +121,7 @@ def test_menu_with_queue(expected, mocker, queue):
     assert result_menu == expected
 
 
-@pytest.mark.vcr(record_mode="none")
+@pytest.mark.vcr
 @pytest.mark.parametrize(
     "mock_input",
     ["help", "homee help", "home help", "mock"],
@@ -126,13 +130,14 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
     path_controller = "openbb_terminal.cryptocurrency.overview.overview_controller"
 
     # DISABLE AUTO-COMPLETION
-    mocker.patch.object(
-        target=overview_controller.obbff,
-        attribute="USE_PROMPT_TOOLKIT",
-        new=False,
+    preferences = PreferencesModel(USE_PROMPT_TOOLKIT=True)
+    mock_current_user = copy_user(preferences=preferences)
+    mocker.patch(
+        target="openbb_terminal.core.session.current_user.__current_user",
+        new=mock_current_user,
     )
     mocker.patch(
-        target=f"{path_controller}.session",
+        target="openbb_terminal.cryptocurrency.overview.overview_controller.session",
         return_value=None,
     )
 
@@ -158,17 +163,17 @@ def test_menu_without_queue_sys_exit(mock_input, mocker):
 
     result_menu = overview_controller.OverviewController(queue=None).menu()
 
-    assert result_menu == []
+    assert result_menu == ["help"]
 
 
-@pytest.mark.vcr(record_mode="none")
+@pytest.mark.vcr(record_mode="once")
 @pytest.mark.record_stdout
 def test_print_help():
     controller = overview_controller.OverviewController(queue=None)
     controller.print_help()
 
 
-@pytest.mark.vcr(record_mode="none")
+@pytest.mark.vcr(record_mode="once")
 @pytest.mark.parametrize(
     "an_input, expected_queue",
     [
@@ -190,7 +195,7 @@ def test_switch(an_input, expected_queue):
     assert queue == expected_queue
 
 
-@pytest.mark.vcr(record_mode="none")
+@pytest.mark.vcr(record_mode="once")
 def test_call_cls(mocker):
     mocker.patch("os.system")
 
@@ -201,7 +206,7 @@ def test_call_cls(mocker):
     os.system.assert_called_once_with("cls||clear")
 
 
-@pytest.mark.vcr(record_mode="none")
+@pytest.mark.vcr(record_mode="once")
 @pytest.mark.parametrize(
     "func, queue, expected_queue",
     [
@@ -240,133 +245,126 @@ def test_call_func_expect_queue(expected_queue, func, queue):
     "tested_func, other_args, mocked_func, called_args, called_kwargs",
     [
         (
-            "call_cgglobal",
-            [],
+            "call_global",
+            ["--source=CoinGecko"],
             "pycoingecko_view.display_global_market_info",
             [],
             dict(),
         ),
         (
-            "call_cgdefi",
+            "call_defi",
             [],
             "pycoingecko_view.display_global_defi_info",
             [],
             dict(),
         ),
         (
-            "call_cgstables",
+            "call_stables",
             [],
             "pycoingecko_view.display_stablecoins",
             [],
             dict(),
         ),
         (
-            "call_cgexchanges",
-            [],
+            "call_exchanges",
+            ["--source=CoinGecko"],
             "pycoingecko_view.display_exchanges",
             [],
             dict(),
         ),
         (
-            "call_cgexrates",
+            "call_exrates",
             [],
             "pycoingecko_view.display_exchange_rates",
             [],
             dict(),
         ),
         (
-            "call_cgplatforms",
+            "call_cr",
             [],
-            "pycoingecko_view.display_platforms",
-            [],
-            dict(),
-        ),
-        (
-            "call_cgproducts",
-            [],
-            "pycoingecko_view.display_products",
+            "loanscan_view.display_crypto_rates",
             [],
             dict(),
         ),
         (
-            "call_cgindexes",
+            "call_indexes",
             [],
             "pycoingecko_view.display_indexes",
             [],
             dict(),
         ),
         (
-            "call_cgderivatives",
+            "call_derivatives",
             [],
             "pycoingecko_view.display_derivatives",
             [],
             dict(),
         ),
         (
-            "call_cgcategories",
+            "call_categories",
             [],
             "pycoingecko_view.display_categories",
             [],
             dict(),
         ),
         (
-            "call_cghold",
+            "call_hold",
             [],
             "pycoingecko_view.display_holdings_overview",
             [],
             dict(),
         ),
         (
-            "call_cpglobal",
-            [],
+            "call_global",
+            ["--source=CoinPaprika"],
             "coinpaprika_view.display_global_market",
             [],
             dict(),
         ),
         (
-            "call_cpmarkets",
+            "call_markets",
             [],
             "coinpaprika_view.display_all_coins_market_info",
             [],
             dict(),
         ),
         (
-            "call_cpexmarkets",
+            "call_exmarkets",
             ["binance"],
             "coinpaprika_view.display_exchange_markets",
             [],
             dict(),
         ),
         (
-            "call_cpinfo",
+            "call_info",
             [],
             "coinpaprika_view.display_all_coins_info",
             [],
             dict(),
         ),
         (
-            "call_cpexchanges",
-            [],
+            "call_exchanges",
+            ["--source=CoinPaprika"],
             "coinpaprika_view.display_all_exchanges",
             [],
             dict(),
         ),
         (
-            "call_cpplatforms",
+            "call_platforms",
             [],
             "coinpaprika_view.display_all_platforms",
             [],
             dict(),
         ),
         (
-            "call_cpcontracts",
+            "call_contracts",
             ["eth-ethereum"],
             "coinpaprika_view.display_contracts",
             [],
             dict(),
         ),
         (
-            "call_cbpairs",
+            "call_pairs",
             [],
             "coinbase_view.display_trading_pairs",
             [],
@@ -414,6 +412,13 @@ def test_call_func_expect_queue(expected_queue, func, queue):
             [],
             dict(),
         ),
+        (
+            "call_fun",
+            ["gmv_annualized"],
+            "tokenterminal_view.display_fundamental_metrics",
+            [],
+            dict(),
+        ),
     ],
 )
 def test_call_func(
@@ -425,6 +430,10 @@ def test_call_func(
     mocker.patch(
         target=f"{path_controller}.get_all_contract_platforms",
         return_value=GET_ALL_CONTRACT_PLATFORMS_DF,
+    )
+    mocker.patch(
+        target=f"{path_controller}.rekt_model.get_crypto_hack_slugs",
+        return_value=["MOCK_SLUG"],
     )
 
     if mocked_func:
